@@ -12,4 +12,5 @@ export const MATCHES: Record<VodKey, string[]> = {
   niconico: ['https://www.nicovideo.jp/watch/*'],
   nhkPlus: ['https://plus.nhk.jp/watch/st/*'],
   tver: ['https://tver.jp/*'],
+  youtube: ['https://*.youtube.com/*'],
 }
