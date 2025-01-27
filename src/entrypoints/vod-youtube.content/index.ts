@@ -164,8 +164,7 @@ const main = async () => {
     childList: true,
     subtree: true
   }
-
-  const obs = new MutationObserver((mutations) => {
+  const obs = new MutationObserver(() => {
     obs.disconnect()
 
     if (patcher.nco && !document.body.contains(patcher.nco.renderer.video)) {
@@ -176,15 +175,8 @@ const main = async () => {
           '#movie_player > div.html5-video-container > video'
         )
 
-        const microFormatElement = document.querySelector("#microformat")
-
-        if (microFormatElement && video) {
-          mutations.forEach(mutation => {
-            if (mutation.target === microFormatElement) {
-              logger.log(mutation.type)
-              patcher.setVideo(video)
-            }
-          })
+        if (video) {
+          patcher.setVideo(video)
         }
       }
     }
