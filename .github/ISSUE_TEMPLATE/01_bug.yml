@@ -47,6 +47,7 @@ body:
         - label: ニコニコ動画
         - label: NHKプラス
         - label: TVer
+        - label: TELESA
 
   - type: textarea
     id: video

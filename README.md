@@ -21,6 +21,8 @@
 - [ニコニコ動画](https://www.nicovideo.jp/)
 - [NHKプラス](https://plus.nhk.jp/)
 - [TVer](https://tver.jp/)
+- [TELESA](https://www.telasa.jp/)
+
 
 ※ 増減する可能性あり
 

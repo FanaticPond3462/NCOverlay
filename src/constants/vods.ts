@@ -12,6 +12,7 @@ export const VOD_KEYS = [
   'niconico',
   'nhkPlus',
   'tver',
+  'telesa'
 ] as const
 
 /** 動画配信サービス */
@@ -29,6 +30,7 @@ export const VODS = {
   niconico: 'ニコニコ動画',
   nhkPlus: 'NHKプラス',
   tver: 'TVer',
+  telesa: 'TELESA',
 } as const satisfies {
   [key in VodKey]: string
 }
