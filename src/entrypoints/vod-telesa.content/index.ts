@@ -1,7 +1,6 @@
 import type { VodKey } from '@/types/constants'
 
 import { defineContentScript } from 'wxt/sandbox'
-import { episode as extractEpisode } from '@midra/nco-parser/extract/lib/episode'
 
 import { MATCHES } from '@/constants/matches'
 
@@ -9,8 +8,6 @@ import { logger } from '@/utils/logger'
 import { checkVodEnable } from '@/utils/extension/checkVodEnable'
 
 import { NCOPatcher } from '@/ncoverlay/patcher'
-
-import type { NextData } from './index.d'
 
 import './style.scss'
 
@@ -30,50 +27,8 @@ const main = async () => {
   const patcher = new NCOPatcher({
     vod,
     getInfo: async (nco) => {
-      const getNextData = (): Promise<NextData | null> => {
-        return new Promise((resolve) => {
-          const getLoop = setInterval(() => {
-            const nextDataElement = document.querySelector("#__NEXT_DATA__")
-            if (!nextDataElement) return;
-            const nextDataContent = nextDataElement.textContent
-            if (!nextDataContent) return;
-
-            let nextData: NextData
-            try {
-              nextData = JSON.parse(nextDataContent)
-            } catch {
-              return;
-            }
-
-            const splited_sep = document.location.pathname.split("/")
-            const video_id = splited_sep[splited_sep.length - 1]
-            if (!video_id) return;
-
-            logger.log('video_id', nextData.props.initialState.videoDetail.video.id)
-            logger.log('URL video id', Number(video_id))
-
-            if (Number(video_id) == nextData.props.initialState.videoDetail.video.id) {
-              clearInterval(getLoop)
-              resolve(nextData)
-            }
-          }, 1);
-        })
-      }
-
-      const nextData: NextData | null = await getNextData()
-      if (!nextData) return null;
-
-      const video = nextData.props.initialState.videoDetail.video
-
-      logger.log('data.props.initialState.videoDetail.video:', video)
-
-      if (!video) {
-        return null
-      }
-
-      const workTitle = video.series_name
-      const episodeTitle = video.subtitle
-
+      const episodeTitle = document.querySelector("head > meta[name='description']")!.getAttribute("content")!.split("／")[0]
+      const workTitle = document.querySelector("title")!.textContent!.split("|")[0].replace(episodeTitle.split(" ")[0], "").trim()
       const duration = nco.renderer.video.duration ?? 0
 
       logger.log('workTitle:', workTitle)
