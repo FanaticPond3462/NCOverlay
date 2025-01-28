@@ -101,6 +101,7 @@ const main = async () => {
       let subTitle = "";
       if (TitleCandidates) {
         const workTitleCandidates = TitleCandidates.filter(v => v.startsWith("『"))
+        // "『"で始まるタイトルを優先的に作品タイトルにする。
         if (workTitleCandidates.length) {
           logger.log('workTitleCandidates:', workTitleCandidates);
           const title = workTitleCandidates[0]
@@ -111,7 +112,9 @@ const main = async () => {
             subTitle = subTitleCandidates[0]
             subTitle = subTitle.substring(1, subTitle.length - 1)
           }
-        } else {
+        }
+        if (!workTitle) {
+          // 順番に
           workTitle = TitleCandidates[0]
           workTitle = workTitle.substring(1, workTitle.length - 1)
 
