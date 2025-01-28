@@ -11,8 +11,6 @@ import { checkVodEnable } from '@/utils/extension/checkVodEnable'
 import { NCOPatcher } from '@/ncoverlay/patcher'
 
 import './style.scss'
-import { ReceiptRussianRuble } from 'lucide-react'
-import { useForceUpdate } from 'framer-motion'
 
 const vod: VodKey = 'youtube'
 
