@@ -17,97 +17,97 @@ import './style.scss'
 const vod: VodKey = 'telesa'
 
 export default defineContentScript({
-	matches: MATCHES[vod],
-	runAt: 'document_end',
-	main: () => void main(),
+  matches: MATCHES[vod],
+  runAt: 'document_end',
+  main: () => void main(),
 })
 
 const main = async () => {
-	if (!(await checkVodEnable(vod))) return
+  if (!(await checkVodEnable(vod))) return
 
-	logger.log(`vod-${vod}.js`)
+  logger.log(`vod-${vod}.js`)
 
-	const patcher = new NCOPatcher({
-		vod,
-		getInfo: async (nco) => {
-			const getNextData = (): Promise<NextData | null> => {
-				return new Promise((resolve) => {
-					const getLoop = setInterval(() => {
-						const nextDataElement = document.querySelector("#__NEXT_DATA__")
-						if (!nextDataElement) return;
-						const nextDataContent = nextDataElement.textContent
-						if (!nextDataContent) return;
+  const patcher = new NCOPatcher({
+    vod,
+    getInfo: async (nco) => {
+      const getNextData = (): Promise<NextData | null> => {
+        return new Promise((resolve) => {
+          const getLoop = setInterval(() => {
+            const nextDataElement = document.querySelector("#__NEXT_DATA__")
+            if (!nextDataElement) return;
+            const nextDataContent = nextDataElement.textContent
+            if (!nextDataContent) return;
 
-						let nextData: NextData
-						try {
-							nextData = JSON.parse(nextDataContent)
-						} catch {
-							return;
-						}
+            let nextData: NextData
+            try {
+              nextData = JSON.parse(nextDataContent)
+            } catch {
+              return;
+            }
 
-						const splited_sep = document.location.pathname.split("/")
-						const video_id = splited_sep[splited_sep.length - 1]
-						if (!video_id) return;
+            const splited_sep = document.location.pathname.split("/")
+            const video_id = splited_sep[splited_sep.length - 1]
+            if (!video_id) return;
 
-						logger.log('video_id', nextData.props.initialState.videoDetail.video.id)
-						logger.log('URL video id', Number(video_id))
+            logger.log('video_id', nextData.props.initialState.videoDetail.video.id)
+            logger.log('URL video id', Number(video_id))
 
-						if (Number(video_id) == nextData.props.initialState.videoDetail.video.id) {
-							clearInterval(getLoop)
-							resolve(nextData)
-						}
-					}, 1);
-				})
-			}
+            if (Number(video_id) == nextData.props.initialState.videoDetail.video.id) {
+              clearInterval(getLoop)
+              resolve(nextData)
+            }
+          }, 1);
+        })
+      }
 
-			const nextData: NextData | null = await getNextData()
-			if (!nextData) return null;
+      const nextData: NextData | null = await getNextData()
+      if (!nextData) return null;
 
-			const video = nextData.props.initialState.videoDetail.video
+      const video = nextData.props.initialState.videoDetail.video
 
-			logger.log('data.props.initialState.videoDetail.video:', video)
+      logger.log('data.props.initialState.videoDetail.video:', video)
 
-			if (!video) {
-				return null
-			}
+      if (!video) {
+        return null
+      }
 
-			const workTitle = video.series_name
-			const episodeTitle = video.subtitle
+      const workTitle = video.series_name
+      const episodeTitle = video.subtitle
 
-			const duration = nco.renderer.video.duration ?? 0
+      const duration = nco.renderer.video.duration ?? 0
 
-			logger.log('workTitle:', workTitle)
-			logger.log('episodeTitle:', episodeTitle)
-			logger.log('duration:', duration)
+      logger.log('workTitle:', workTitle)
+      logger.log('episodeTitle:', episodeTitle)
+      logger.log('duration:', duration)
 
-			return workTitle ? { workTitle, episodeTitle, duration } : null
-		},
-		appendCanvas: (video, canvas) => {
-			video.insertAdjacentElement('afterend', canvas)
-		},
-	});
+      return workTitle ? { workTitle, episodeTitle, duration } : null
+    },
+    appendCanvas: (video, canvas) => {
+      video.insertAdjacentElement('afterend', canvas)
+    },
+  });
 
-	const obs_config: MutationObserverInit = {
-		childList: true,
-		subtree: true,
-	}
-	const obs = new MutationObserver(() => {
-		obs.disconnect()
+  const obs_config: MutationObserverInit = {
+    childList: true,
+    subtree: true,
+  }
+  const obs = new MutationObserver(() => {
+    obs.disconnect()
 
-		if (patcher.nco && !document.body.contains(patcher.nco.renderer.video)) {
-			patcher.dispose()
-		} else if (!patcher.nco) {
-			if (location.pathname.startsWith('/play/')) {
-				const video = document.querySelector<HTMLVideoElement>("#bitmovinplayer-video-null")
+    if (patcher.nco && !document.body.contains(patcher.nco.renderer.video)) {
+      patcher.dispose()
+    } else if (!patcher.nco) {
+      if (location.pathname.startsWith('/play/')) {
+        const video = document.querySelector<HTMLVideoElement>("#bitmovinplayer-video-null")
 
-				if (video) {
-					patcher.setVideo(video)
-				}
-			}
-		}
+        if (video) {
+          patcher.setVideo(video)
+        }
+      }
+    }
 
-		obs.observe(document.body, obs_config)
-	})
+    obs.observe(document.body, obs_config)
+  })
 
-	obs.observe(document.body, obs_config)
+  obs.observe(document.body, obs_config)
 }
