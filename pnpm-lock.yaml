@@ -8,6 +8,9 @@ importers:
 
   .:
     dependencies:
+      '@geolonia/japanese-numeral':
+        specifier: ^1.0.2
+        version: 1.0.2
       '@icons-pack/react-simple-icons':
         specifier: ^11.0.0
         version: 11.0.0(react@19.0.0)
