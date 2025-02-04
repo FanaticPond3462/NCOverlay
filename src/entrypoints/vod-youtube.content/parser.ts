@@ -1,7 +1,7 @@
 import { episode, season } from "./extractor";
 import { REGEXP_NUMBER } from "@midra/nco-parser/extract/lib/core";
 
-const SEPARATORS = /^['"『』【】\(\)「」｢｣《》/〈〉＜＞\[\]〔〕\s|｜／│・（）~”-]+/;
+const SEPARATORS = /^["『』【】\(\)「」｢｣《》/〈〉＜＞\[\]〔〕\s|｜／│・（）~”-]+/;
 const BRACKET_MAP: { [key: string]: string } = {
     "「": "」", "｢": "｣", "『": "』", "【": "】", "(": ")", "（": "）", "《": "》", "〈": "〉", "'": "'", '"': '"', "〔": "〕", "[": "]", "”": "”",
 };
@@ -140,7 +140,7 @@ export const genAST = (tokens: string[]): ASTResult[] => {
                     });
                     return;
                 }
-                if (/\d+年|\/\d+月|\/\d+日?/.test(element.content)) {
+                if (/(\d+年|\/)?\d+月|\/\d+日?/.test(element.content)) {
                     let suffix = "";
                     for (let o = 1; tokens[i + o]; o++) {
                         if (tokens[i + o] === " ") {
