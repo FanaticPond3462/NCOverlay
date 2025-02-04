@@ -1,18 +1,27 @@
 import type { VodKey } from '@/types/constants'
 
 import { defineContentScript } from 'wxt/sandbox'
-import { normalizeAll } from '@midra/nco-parser/normalize'
+import { romanNum, symbol, numeric, charWidth } from "@midra/nco-parser/normalize/lib/adjust/index"
+import { tokenize, genAST } from "./parser"
+import { evalAST } from "./evaluate"
 
 import { MATCHES } from '@/constants/matches'
 
 import { logger } from '@/utils/logger'
 import { checkVodEnable } from '@/utils/extension/checkVodEnable'
 
+
 import { NCOPatcher } from '@/ncoverlay/patcher'
 
 import './style.scss'
-import { ReceiptRussianRuble } from 'lucide-react'
-import { useForceUpdate } from 'framer-motion'
+import type { ExtractResult } from '@midra/nco-parser/extract/lib/core'
+
+export type ResolvedResult = {
+  text: string
+  type: "ProperNoun" | "Label" | "Episode" | "Season" | "Hashtag" | "Unknown"
+  prefix: string | null
+  suffix: string | null
+}
 
 const vod: VodKey = 'youtube'
 
@@ -86,64 +95,29 @@ const main = async () => {
 
       const microFormat: microFormat_interface | null = await getMicroFormat()
       if (!microFormat) return null;
-      logger.log('microFormat:', microFormat)
+      logger.log('microFormat:', microFormat);
 
       const videoTitle = microFormat.name;
       logger.log('videoTitle:', videoTitle);
-      if (!videoTitle) return null
+      if (!videoTitle) return null;
 
-      // 作品タイトルを取得
-      // 戦略: 「」や『』で囲まれた文字列を作品タイトルとする
-      const TitleCandidates = Array.from(videoTitle.matchAll(/「.*」|『.*』/g)).map(val => val[0]);
-      logger.log('TitleCandidates:', TitleCandidates);
-
-      let workTitle = "";
-      let subTitle = "";
-      if (TitleCandidates) {
-        const workTitleCandidates = TitleCandidates.filter(v => v.startsWith("『"))
-        // "『"で始まるタイトルを優先的に作品タイトルにする。
-        if (workTitleCandidates.length) {
-          logger.log('workTitleCandidates:', workTitleCandidates);
-          const title = workTitleCandidates[0]
-          workTitle = title.substring(1, title.length - 1)
-          const subTitleCandidates = TitleCandidates.filter(v => v.startsWith("「"))
-          if (subTitleCandidates.length) {
-            logger.log('subTitleCandidates:', subTitleCandidates);
-            subTitle = subTitleCandidates[0]
-            subTitle = subTitle.substring(1, subTitle.length - 1)
-          }
-        }
-        if (!workTitle) {
-          // 順番に
-          workTitle = TitleCandidates[0]
-          workTitle = workTitle.substring(1, workTitle.length - 1)
-
-          if (TitleCandidates[1]) {
-            subTitle = TitleCandidates[1]
-            subTitle = subTitle.substring(1, subTitle.length - 1)
-          }
-        }
+      const normalized = charWidth(romanNum(symbol(numeric(videoTitle))))
+      const tokens = tokenize(normalized)
+      const AST = genAST(tokens)
+      logger.log("AST:", AST)
+      const evaled = evalAST(AST)
+      logger.log("evaled:", evaled)
+      let workTitle = evaled.title
+      if (evaled.season) {
+        workTitle += " " + evaled.season
+      }
+      let episodeTitle: string | null = null;
+      if (evaled.episodes[0] && evaled.episodes[0].number !== 0) {
+        episodeTitle = `第${evaled.episodes[0].number}話`
+      } else {
+        episodeTitle = evaled.episodes[0].title
       }
 
-      logger.log('workTitle:', workTitle)
-      logger.log('subTitle:', subTitle)
-
-      // エピソードタイトルを取得
-      // 戦略: サブタイトルを取得するのは非現実的なので、第何話かを取得する
-      let episodeTitle: string | undefined = ""
-
-      const episodeTitleCandidates = /[最終|第]?[0-9|一|二|三|四|五|六|七|八|九|十]+[話|回]/.exec(normalizeAll(videoTitle));
-
-      if (episodeTitleCandidates && episodeTitleCandidates.length == 1) {
-        episodeTitle = episodeTitleCandidates[0]
-      }
-      if (subTitle) {
-        episodeTitle += " " + subTitle
-        episodeTitle = episodeTitle.trim()
-      }
-      if (episodeTitle === "") {
-        episodeTitle = undefined
-      }
 
       // 動画時間を取得
       const duration = parseMicroFormatTimecode(microFormat.duration)

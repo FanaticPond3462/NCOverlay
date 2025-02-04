@@ -16,6 +16,7 @@
     "compile": "tsc -p tsconfig.build.json --noEmit"
   },
   "dependencies": {
+    "@geolonia/japanese-numeral": "^1.0.2",
     "@icons-pack/react-simple-icons": "^11.2.0",
     "@internationalized/date": "^3.7.0",
     "@midra/nco-api": "^1.10.3",
