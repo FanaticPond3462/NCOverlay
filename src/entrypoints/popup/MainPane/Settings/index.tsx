@@ -1,4 +1,4 @@
-import type { AccordionItemProps } from "@heroui/react"
+import type { AccordionItemProps } from '@heroui/react'
 
 import { memo } from 'react'
 import {
@@ -9,7 +9,7 @@ import {
   Code,
   Image,
   cn,
-} from "@heroui/react"
+} from '@heroui/react'
 import {
   InfoIcon,
   DatabaseIcon,
@@ -37,7 +37,7 @@ import { StorageSizes } from './StorageSizes'
 import { ImportExport } from './ImportExport'
 
 const { name, version } = webext.runtime.getManifest()
-const iconUrl = webext.runtime.getURL('/icon-128.png')
+const iconUrl = webext.runtime.getURL('/icons/128.png')
 
 const accordionItemClassNames: AccordionItemProps['classNames'] = {
   indicator: cn('-rotate-90 data-[open=true]:rotate-90'),
