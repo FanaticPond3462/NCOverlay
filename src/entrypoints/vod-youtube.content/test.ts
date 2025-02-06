@@ -368,11 +368,11 @@ test_data.forEach(e => {
     const tokens = tokenize(normalized)
     // console.log(e, tokens)
     const AST = genAST(tokens)
-    console.dir(AST, {
-        depth: 400
-    })
+    // console.dir(AST, {
+    //     depth: 400
+    // })
     const evaled = evalAST(AST)
-    // console.log(e, evaled)
+    console.log(e, evaled)
 })
 
 console.log(test_data.length)

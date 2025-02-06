@@ -27,6 +27,11 @@ export type ASTResult = ASTElement | ASTBlock;
 
 const isBlock = (x: any): x is ASTBlock => x.type === "Block";
 
+/**
+ * @param str 分割する対象文字列
+ * @param ranges startで文字列の開始、endで文字列の終了、typeで囲んだ文字列のタイプを指定
+ * @returns ASTElementの配列 (未指定の領域のタイプはUnknown)
+ */
 function splitStringByRanges(str: string, ranges: { start: number, end: number, type: ASTElement["type"] }[]): ASTElement[] {
     const result: ASTElement[] = [];
     let lastIndex = 0;
@@ -61,6 +66,53 @@ function splitStringByRanges(str: string, ranges: { start: number, end: number, 
     return result;
 }
 
+function formatUnknown(elements: ASTElement[]) {
+    const result: ASTElement[] = [];
+
+    const separators = []
+    while (true) {
+        let isSep: ASTElement | null = elements.pop()!;
+        if (!SEPARATORS.test(isSep.content)) {
+            elements.push(isSep);
+            isSep = null;
+        } else {
+            separators.push(isSep)
+        }
+        if (!elements.length || isSep === null) {
+            break;
+        }
+    }
+    while (true) {
+        if (elements.length && SEPARATORS.test(elements[0].content)) {
+            const sep_element = elements.shift()!;
+            sep_element.type = "Separator";
+            result.push(sep_element);
+        } else {
+            break;
+        }
+    }
+    if (elements.length) {
+        result.push({
+            content: elements.map(e => e.content).join(""),
+            type: "Unknown",
+            prefix: null,
+            suffix: null
+        });
+    }
+    if (separators.length) {
+        separators.forEach(e => {
+            e.type = "Separator";
+            result.push(e);
+        })
+    }
+
+    return result
+}
+
+/**
+ * トークン化された文字列の配列からAbstract Syntax Treeを生成
+ * @returns Abstract Syntax Tree 
+ */
 export const genAST = (tokens: string[]): ASTResult[] => {
     const result: ASTResult[] = [];
 
@@ -77,7 +129,7 @@ export const genAST = (tokens: string[]): ASTResult[] => {
             }
 
             result.push({
-                content: prefix === "「" || prefix === "『" || prefix === "｢" ? [{
+                content: ["「", "『", "｢"].includes(prefix) ? [{
                     content: contents.join(""),
                     type: "Constant",
                     prefix: null,
@@ -178,78 +230,28 @@ export const genAST = (tokens: string[]): ASTResult[] => {
     const mergedResult: ASTResult[] = [];
     let tempUnknowns: ASTElement[] = [];
 
+    // 不明な単語同士を連結する
     for (const element of result) {
         if (element.type === "Unknown") {
             tempUnknowns.push(element);
-        } else {
-            if (tempUnknowns.length) {
-                const separators = []
-                while (true) {
-                    let isSep: ASTElement | null = tempUnknowns.pop()!;
-                    if (!SEPARATORS.test(isSep.content)) {
-                        tempUnknowns.push(isSep);
-                        isSep = null;
-                    } else {
-                        separators.push(isSep)
-                    }
-                    if (!tempUnknowns.length || isSep === null) {
-                        break;
-                    }
-                }
-                while (true) {
-                    if (tempUnknowns.length && SEPARATORS.test(tempUnknowns[0].content)) {
-                        const sep_element = tempUnknowns.shift()!;
-                        sep_element.type = "Separator";
-                        mergedResult.push(sep_element);
-                    } else {
-                        break;
-                    }
-                }
-                if (tempUnknowns.length) {
-                    mergedResult.push({
-                        content: tempUnknowns.map(e => e.content).join(""),
-                        type: "Unknown",
-                        prefix: null,
-                        suffix: null
-                    });
-                    tempUnknowns = [];
-                }
-                if (separators.length) {
-                    separators.forEach(e => {
-                        e.type = "Separator";
-                        mergedResult.push(e);
-                    })
-                }
-            }
-            mergedResult.push(element);
+            continue;
         }
+
+        // 要素の前後がセパレータか判定して、セパレータとして設定する
+        if (tempUnknowns.length) {
+            mergedResult.push(...formatUnknown(tempUnknowns))
+            tempUnknowns = []
+        }
+        mergedResult.push(element);
     }
 
+    // 要素の前後がセパレータか判定して、セパレータとして設定する
     if (tempUnknowns.length) {
-        let isSep: ASTElement | null = tempUnknowns.pop()!;
-        if (!SEPARATORS.test(isSep.content)) {
-            tempUnknowns.push(isSep);
-            isSep = null;
-        }
-        if (tempUnknowns.length && SEPARATORS.test(tempUnknowns[0].content)) {
-            const sep_element = tempUnknowns.shift()!;
-            sep_element.type = "Separator";
-            mergedResult.push(sep_element);
-        }
-        if (tempUnknowns.length) {
-            mergedResult.push({
-                content: tempUnknowns.map(e => e.content).join(""),
-                type: "Unknown",
-                prefix: null,
-                suffix: null
-            });
-            tempUnknowns = [];
-        }
-        if (isSep) {
-            isSep.type = "Separator";
-            mergedResult.push(isSep);
-        }
+        mergedResult.push(...formatUnknown(tempUnknowns))
+        tempUnknowns = []
     }
+
+    // エピソード宣言の前後を付属語に設定する
     mergedResult.forEach((e, i) => {
         if (mergedResult[i - 1] && mergedResult[i - 1].type == "Episode" && e.type === "Unknown") {
             e.type = "Adjunct"
@@ -262,6 +264,10 @@ export const genAST = (tokens: string[]): ASTResult[] => {
     return mergedResult;
 };
 
+/**
+ * @param target 
+ * @returns トークン化された文字列配列
+ */
 export const tokenize = (target: string): string[] => {
     const tokens: string[] = [];
     let currentPart = "";

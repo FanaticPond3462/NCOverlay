@@ -33,6 +33,10 @@ export type ExtractResult = {
   range: [start: number, end: number]
 }
 
+/**
+ * @deprecated このcoreはYouTube専用です。意図しない動作を防ぐため、nco-parser内のcoreを使用してください。
+ * @description 第1~3話などの表現に対応し、RegExpを実行出来ます。
+ */
 const core = (str: string, regexps: RegExp[]): ExtractResult[] => {
   const matches: ExtractResult[] = []
 

@@ -1,6 +1,6 @@
 import type { ASTResult, ASTElement, ASTBlock } from "./parser";
 import { dump } from "./parser";
-import { episode, season } from "./extractor";
+import { episode } from "./extractor";
 
 type EvaluatedEpisode = {
     title: string | null
@@ -28,7 +28,7 @@ export const evalAST = (ast: ASTResult[]): EvaluatedMeta => {
     let episodeRanges: { from: number, to: number } | null = null;
     let previous: ASTElement | null = null;
 
-    ast.forEach((element, i, array) => {
+    ast.forEach(element => {
         if (element.type === "Season") {
             if (!evaluatedMeta.season) {
                 evaluatedMeta.season = element.content;
@@ -72,7 +72,7 @@ export const evalAST = (ast: ASTResult[]): EvaluatedMeta => {
                 } else if (["(", "〔"].includes(element.prefix ?? "")) {
                     return
                 } else if (e.type === "Constant" || e.type === "Unknown") {
-                    if (previous?.type === "Episode" || previous?.prefix != "「") {
+                    if (previous?.type === "Episode") {
                         subtitleParts.push(e);
                     } else if (!title || force_title) {
                         title = e;
