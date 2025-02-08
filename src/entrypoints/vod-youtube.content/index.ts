@@ -3,7 +3,7 @@ import type { VodKey } from '@/types/constants'
 import { defineContentScript } from 'wxt/sandbox'
 import { romanNum, symbol, numeric, charWidth } from "@midra/nco-parser/normalize/lib/adjust/index"
 import { tokenize, genAST } from "./parser"
-import { evalAST } from "./evaluate"
+import { evalAST } from "./next-gen-eval"
 
 import { MATCHES } from '@/constants/matches'
 
@@ -14,14 +14,7 @@ import { checkVodEnable } from '@/utils/extension/checkVodEnable'
 import { NCOPatcher } from '@/ncoverlay/patcher'
 
 import './style.scss'
-import type { ExtractResult } from '@midra/nco-parser/extract/lib/core'
 
-export type ResolvedResult = {
-  text: string
-  type: "ProperNoun" | "Label" | "Episode" | "Season" | "Hashtag" | "Unknown"
-  prefix: string | null
-  suffix: string | null
-}
 
 const vod: VodKey = 'youtube'
 

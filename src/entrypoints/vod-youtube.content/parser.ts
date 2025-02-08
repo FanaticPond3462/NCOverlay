@@ -1,7 +1,7 @@
 import { episode, season } from "./extractor";
 import { REGEXP_NUMBER } from "@midra/nco-parser/extract/lib/core";
 
-const SEPARATORS = /^["『』【】\(\)「」｢｣《》/〈〉＜＞\[\]〔〕\s|｜／│・（）~”-]+/;
+const SEPARATORS = /^["『』【】\(\)「」｢｣《》/〈〉＜＞\[\]〔〕\s|｜／│・（）”-]+/;
 const BRACKET_MAP: { [key: string]: string } = {
     "「": "」", "｢": "｣", "『": "』", "【": "】", "(": ")", "（": "）", "《": "》", "〈": "〉", "'": "'", '"': '"', "〔": "〕", "[": "]", "”": "”",
 };
@@ -66,34 +66,38 @@ function splitStringByRanges(str: string, ranges: { start: number, end: number, 
     return result;
 }
 
-function formatUnknown(elements: ASTElement[]) {
-    const result: ASTElement[] = [];
+function formatUnknown(elements: ASTResult[]) {
+    const result: ASTResult[] = [];
 
     const separators = []
-    while (true) {
-        let isSep: ASTElement | null = elements.pop()!;
-        if (!SEPARATORS.test(isSep.content)) {
+    while (elements.length) {
+        let isSep: ASTResult | null = elements.pop()!;
+        if (isSep.type !== "Block" && !SEPARATORS.test(isSep.content)) {
             elements.push(isSep);
             isSep = null;
         } else {
             separators.push(isSep)
         }
-        if (!elements.length || isSep === null) {
+        if (isSep === null) {
             break;
         }
     }
-    while (true) {
-        if (elements.length && SEPARATORS.test(elements[0].content)) {
+    while (elements.length) {
+        let isSep: ASTResult | null = elements[0];
+        if (isSep.type !== "Block" && SEPARATORS.test(isSep.content)) {
             const sep_element = elements.shift()!;
             sep_element.type = "Separator";
             result.push(sep_element);
         } else {
             break;
         }
+        if (isSep === null) {
+            break;
+        }
     }
     if (elements.length) {
         result.push({
-            content: elements.map(e => e.content).join(""),
+            content: elements.map(e => dump(e)).join(""),
             type: "Unknown",
             prefix: null,
             suffix: null
@@ -228,22 +232,27 @@ export const genAST = (tokens: string[]): ASTResult[] => {
     }
 
     const mergedResult: ASTResult[] = [];
-    let tempUnknowns: ASTElement[] = [];
+    let tempUnknowns: ASTResult[] = [];
 
     // 不明な単語同士を連結する
-    for (const element of result) {
+    result.forEach((element, index) => {
         if (element.type === "Unknown") {
             tempUnknowns.push(element);
-            continue;
+            return;
         }
-
+        if (element.type === "Block" && element.prefix === "(") {
+            if (result[index + 1]?.type === "Unknown") {
+                tempUnknowns.push(element);
+                return;
+            }
+        }
         // 要素の前後がセパレータか判定して、セパレータとして設定する
         if (tempUnknowns.length) {
             mergedResult.push(...formatUnknown(tempUnknowns))
             tempUnknowns = []
         }
         mergedResult.push(element);
-    }
+    });
 
     // 要素の前後がセパレータか判定して、セパレータとして設定する
     if (tempUnknowns.length) {

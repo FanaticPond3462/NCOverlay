@@ -101,21 +101,21 @@ const core = (str: string, regexps: RegExp[]): ExtractResult[] => {
 const episodeREGEXPS = [
 
   // 第1話 第1~2話
-  `((?<from_prefix>新?第?)(?<from_number>${REGEXP_NUMBER})(?<from_suffix>話?目?)(?<separator>[~&]))?(?<prefix>新?第?)(?<number>${REGEXP_NUMBER})(?<suffix>話目?)`,
+  `((?<from_prefix>新?第?)(?<from_number>${REGEXP_NUMBER})(?<from_suffix>話?目?)(?<separator>[~～&]))?(?<prefix>全?新?第?)(?<number>${REGEXP_NUMBER})(?<suffix>話目?)`,
   // 第一話 第一~二話
-  `((?<from_prefix>新?第?)(?<from_kansuji>${REGEXP_KANSUJI})(?<from_suffix>話?目?)(?<separator>[~&]))?(?<prefix>新?第?)(?<kansuji>${REGEXP_KANSUJI})(?<suffix>話目?)`,
+  `((?<from_prefix>新?第?)(?<from_kansuji>${REGEXP_KANSUJI})(?<from_suffix>話?目?)(?<separator>[~～&]))?(?<prefix>全?新?第?)(?<kansuji>${REGEXP_KANSUJI})(?<suffix>話目?)`,
   // 第壱話 第壱~弐話
-  `((?<from_prefix>新?第?)(?<from_kansuji>${REGEXP_DAIJI_KANSUJI})(?<from_suffix>話?目?)(?<separator>[~&]))?(?<prefix>新?第?)(?<kansuji>${REGEXP_DAIJI_KANSUJI})(?<suffix>話目?)`,
+  `((?<from_prefix>新?第?)(?<from_kansuji>${REGEXP_DAIJI_KANSUJI})(?<from_suffix>話?目?)(?<separator>[~～&]))?(?<prefix>全?新?第?)(?<kansuji>${REGEXP_DAIJI_KANSUJI})(?<suffix>話目?)`,
 
   // エピソード1
   `(?<prefix>エピソード)(?<number>${REGEXP_NUMBER})`,
   `(?<prefix>えぴそーど)(?<number>${REGEXP_NUMBER})`,
 
   // episode1, ep 1, episode.1, ep:01, episode|1
-  `(?<=[^a-z])(?<prefix>(?:episode|ep)[\\s\\.:|]?)(?<number>${REGEXP_NUMBER})(?=\\s|$)`,
+  `(?<prefix>(?:episode|ep)[\\s\\.:|]?)(?<number>${REGEXP_NUMBER})(?=\\s|$)`,
 
   // chapter1, chapter.1, chapter:1, chapter|1
-  `(?<=[^a-z])(?<prefix>(?:chapter)[\\s\\.:|]?)(?<number>${REGEXP_NUMBER})(?=\\s|$)`,
+  `(?<prefix>(?:chapter)[\\s\\.:|]?)(?<number>${REGEXP_NUMBER})(?=\\s|$)`,
 
   // #01
   `(?<prefix>#)(?<number>${REGEXP_NUMBER})`,
