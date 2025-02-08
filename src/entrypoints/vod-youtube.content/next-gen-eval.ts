@@ -105,6 +105,10 @@ export const evalAST = (ast: ASTResult[]): EvaluatedMeta => {
                 if (episodeParsed.from_number !== null && episodeParsed.from_number !== undefined) {
                     episodeRanges = { from: episodeParsed.from_number, to: episodeNumber };
                 } else {
+                    if (episodeParsed.prefix?.includes("全")) {
+                        episodeRanges = { from: 1, to: episodeNumber };
+                        return;
+                    }
                     episodeRanges = { from: episodeNumber, to: episodeNumber };
                 }
             }

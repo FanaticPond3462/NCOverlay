@@ -11,9 +11,12 @@ import { logger } from '@/utils/logger'
 import { checkVodEnable } from '@/utils/extension/checkVodEnable'
 
 
-import { NCOPatcher } from '@/ncoverlay/patcher'
+import { NCOPatcher, type PlayingInfo } from '@/ncoverlay/patcher'
 
 import './style.scss'
+import type { NCOverlay } from '@/ncoverlay'
+import { ncoMessenger, sendNcoMessage } from '@/ncoverlay/messaging'
+import { tr } from 'framer-motion/client'
 
 
 const vod: VodKey = 'youtube'
@@ -56,70 +59,94 @@ const main = async () => {
     author: string;
   }
 
+  const getInfomation = async (nco: NCOverlay): Promise<{
+    one_episode_duaration: number;
+    workTitle: string | null;
+    seasonContext: string | null;
+    episodeIndex?: number
+    episodeTitle?: string | null
+    duration: number;
+  } | null> => {
+    const getMicroFormat = (): Promise<microFormat_interface | null> => {
+      return new Promise((resolve) => {
+        const getLoop = setInterval(() => {
+          const microFormatElement = document.querySelector("#microformat script")
+          if (!microFormatElement) return;
+          const microFormatContent = microFormatElement.textContent
+          if (!microFormatContent) return;
+
+          let microFormat: microFormat_interface
+          try {
+            microFormat = JSON.parse(microFormatContent)
+          } catch {
+            return;
+          }
+
+          const video_id = new URLSearchParams(document.location.search).get("v")
+          if (!video_id) return;
+          microFormat.thumbnailUrl.forEach(thumbnailUrl => {
+            if (thumbnailUrl.includes(video_id)) {
+              clearInterval(getLoop)
+              resolve(microFormat)
+            }
+          }, 1)
+        });
+      })
+    }
+    if (document.querySelector("#movie_player.ad-showing")) {
+      return null;
+    }
+
+    const microFormat: microFormat_interface | null = await getMicroFormat()
+    if (!microFormat) return null;
+    // logger.log('microFormat:', microFormat);
+
+    const videoTitle = microFormat.name;
+    // logger.log('videoTitle:', videoTitle);
+    if (!videoTitle) return null;
+
+    const normalized = charWidth(romanNum(symbol(numeric(videoTitle))))
+    const tokens = tokenize(normalized)
+    const AST = genAST(tokens)
+    // logger.log("AST:", AST)
+    const evaled = evalAST(AST)
+    // logger.log("evaled:", evaled)
+
+    // 動画時間を取得
+    const duration = parseMicroFormatTimecode(microFormat.duration)
+    if (!duration) return null
+
+    const currentTime = nco.renderer.video.currentTime;
+    const one_episode_duaration = duration / evaled.episodes.length
+    const episodeIndex = Math.floor(currentTime / one_episode_duaration)
+    const episode = evaled.episodes[episodeIndex]
+
+    return {
+      one_episode_duaration,
+      workTitle: evaled.title,
+      seasonContext: evaled.season,
+      episodeIndex: episodeIndex,
+      episodeTitle: episode.number !== 0 ? `第${episode.number}話` : episode.title,
+      duration: one_episode_duaration
+    }
+  }
   const patcher = new NCOPatcher({
     vod,
-    getInfo: async () => {
-      const getMicroFormat = (): Promise<microFormat_interface | null> => {
-        return new Promise((resolve) => {
-          const getLoop = setInterval(() => {
-            const microFormatElement = document.querySelector("#microformat script")
-            if (!microFormatElement) return;
-            const microFormatContent = microFormatElement.textContent
-            if (!microFormatContent) return;
-
-            let microFormat: microFormat_interface
-            try {
-              microFormat = JSON.parse(microFormatContent)
-            } catch {
-              return;
-            }
-
-            const video_id = new URLSearchParams(document.location.search).get("v")
-            if (!video_id) return;
-            microFormat.thumbnailUrl.forEach(thumbnailUrl => {
-              if (thumbnailUrl.includes(video_id)) {
-                clearInterval(getLoop)
-                resolve(microFormat)
-              }
-            }, 1)
-          });
-        })
+    getInfo: async (nco) => {
+      const info = await getInfomation(nco)
+      if (!info) {
+        return null;
       }
-
-      const microFormat: microFormat_interface | null = await getMicroFormat()
-      if (!microFormat) return null;
-      logger.log('microFormat:', microFormat);
-
-      const videoTitle = microFormat.name;
-      logger.log('videoTitle:', videoTitle);
-      if (!videoTitle) return null;
-
-      const normalized = charWidth(romanNum(symbol(numeric(videoTitle))))
-      const tokens = tokenize(normalized)
-      const AST = genAST(tokens)
-      logger.log("AST:", AST)
-      const evaled = evalAST(AST)
-      logger.log("evaled:", evaled)
-      let workTitle = evaled.title
-      if (evaled.season) {
-        workTitle += " " + evaled.season
+      let workTitle = info.workTitle
+      if (info.seasonContext) {
+        workTitle += " " + info.seasonContext;
       }
-      let episodeTitle: string | null = null;
-      if (evaled.episodes[0] && evaled.episodes[0].number !== 0) {
-        episodeTitle = `第${evaled.episodes[0].number}話`
-      } else {
-        episodeTitle = evaled.episodes[0].title
-      }
-
-
-      // 動画時間を取得
-      const duration = parseMicroFormatTimecode(microFormat.duration)
+      const episodeTitle = info.episodeTitle;
+      const duration = info.duration;
 
       logger.log('workTitle:', workTitle)
       logger.log('episodeTitle:', episodeTitle)
       logger.log('duration:', duration)
-
-      if (!duration) return null
 
       return workTitle ? { workTitle, episodeTitle, duration } : null
     },
@@ -134,19 +161,54 @@ const main = async () => {
     childList: true,
     subtree: true
   }
-  const obs = new MutationObserver(() => {
+  const obs = new MutationObserver(async () => {
     obs.disconnect()
+
+    let cache: number | undefined
 
     if (patcher.nco && !document.body.contains(patcher.nco.renderer.video)) {
       patcher.dispose()
     } else if (!patcher.nco) {
       if (location.pathname.startsWith('/watch')) {
         const video = document.body.querySelector<HTMLVideoElement>(
-          '#movie_player > div.html5-video-container > video'
+          '#movie_player:not(.ad-showing) > div.html5-video-container > video'
         )
 
         if (video) {
-          patcher.setVideo(video)
+          const loadVideo = () => {
+            return new Promise(resolve => {
+              patcher.setVideo(video)
+              const nco = patcher.nco! as NCOverlay
+
+              getInfomation(nco).then(async value => {
+                const offset = value?.one_episode_duaration! * value?.episodeIndex!
+                await nco.keyboard.setOffset(offset ?? 0)
+                cache = value?.episodeIndex
+              });
+
+              nco.addEventListener("loadedmetadata", () => {
+                getInfomation(nco).then(value => {
+                  cache = value?.episodeIndex
+                });
+              })
+
+              nco.addEventListener("timeupdate", () => {
+                getInfomation(nco).then(async value => {
+                  const offset = value?.one_episode_duaration! * value?.episodeIndex!
+                  if (offset !== await nco.keyboard.getOffset()) {
+                    await nco.keyboard.setOffset(offset)
+                  }
+                  if (cache !== value?.episodeIndex) {
+                    patcher.dispose()
+                    resolve(0)
+                  }
+                })
+              })
+            })
+          }
+          while (document.body.contains(video)) {
+            await loadVideo()
+          }
         }
       }
     }
