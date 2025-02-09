@@ -1,6 +1,6 @@
 import { romanNum, symbol, numeric, charWidth } from "@midra/nco-parser/normalize/lib/adjust/index"
 import { genAST, tokenize } from "./parser"
-import { evalAST } from "./next-gen-eval"
+import { evalAST } from "./evaluator"
 
 const test_data = [
     // "【公式】『転生したらスライムだった件』 第1話 「暴風竜ヴェルドラ」",

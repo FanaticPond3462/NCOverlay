@@ -3,7 +3,7 @@ import type { VodKey } from '@/types/constants'
 import { defineContentScript } from 'wxt/sandbox'
 import { romanNum, symbol, numeric, charWidth } from "@midra/nco-parser/normalize/lib/adjust/index"
 import { tokenize, genAST } from "./parser"
-import { evalAST } from "./next-gen-eval"
+import { evalAST } from "./evaluator"
 
 import { MATCHES } from '@/constants/matches'
 
@@ -11,12 +11,10 @@ import { logger } from '@/utils/logger'
 import { checkVodEnable } from '@/utils/extension/checkVodEnable'
 
 
-import { NCOPatcher, type PlayingInfo } from '@/ncoverlay/patcher'
+import { NCOPatcher } from '@/ncoverlay/patcher'
+import type { NCOverlay } from '@/ncoverlay'
 
 import './style.scss'
-import type { NCOverlay } from '@/ncoverlay'
-import { ncoMessenger, sendNcoMessage } from '@/ncoverlay/messaging'
-import { tr } from 'framer-motion/client'
 
 
 const vod: VodKey = 'youtube'
