@@ -1,8 +1,8 @@
-import type { NiconicoGenre } from '@midra/nco-api/types/constants'
+import type { NiconicoGenre } from '@midra/nco-utils/types/api/constants'
 import type { SettingItems } from '@/types/storage'
 
 import { ShapesIcon } from 'lucide-react'
-import { NICONICO_GENRES } from '@midra/nco-api/constants'
+import { NICONICO_GENRES } from '@midra/nco-utils/api/constants'
 
 import { useSettings } from '@/hooks/useSettings'
 
@@ -17,7 +17,7 @@ export type GenreProps = {
   isDisabled?: boolean
 }
 
-export const Genre: React.FC<GenreProps> = ({ isDisabled }) => {
+export function Genre({ isDisabled }: GenreProps) {
   const [value, setValue] = useSettings('settings:search:genre')
 
   return (

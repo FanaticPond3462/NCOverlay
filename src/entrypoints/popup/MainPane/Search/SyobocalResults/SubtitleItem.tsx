@@ -3,8 +3,8 @@ import type { ScTitleItem } from './TitleItem'
 import type { SubtitleDetailHandle } from './SubtitleDetail'
 
 import { useState, useImperativeHandle, useRef } from 'react'
-import { cn } from '@nextui-org/react'
-import { TRANSITION_VARIANTS } from '@nextui-org/framer-utils'
+import { cn } from '@heroui/react'
+import { TRANSITION_VARIANTS } from '@heroui/framer-utils'
 import { LazyMotion, domAnimation, useWillChange, m } from 'framer-motion'
 import { useOverflowDetector } from 'react-detectable-overflow'
 import { ChevronDownIcon } from 'lucide-react'
@@ -33,12 +33,12 @@ export type SubtitleItemProps = {
   ref: React.Ref<SubtitleItemHandle>
 }
 
-export const SubtitleItem: React.FC<SubtitleItemProps> = ({
+export function SubtitleItem({
   title,
   subtitle,
   onClick,
   ref,
-}) => {
+}: SubtitleItemProps) {
   const detailRef = useRef<SubtitleDetailHandle>(null)
 
   const [isOpen, setIsOpen] = useState(false)
@@ -70,13 +70,13 @@ export const SubtitleItem: React.FC<SubtitleItemProps> = ({
         )}
         onClick={onClick}
       >
-        <div className="flex flex-row gap-1.5 text-tiny">
-          <span className="shrink-0 text-foreground-500 dark:text-foreground-600">
+        <div className="text-tiny flex flex-row gap-1.5">
+          <span className="text-foreground-500 dark:text-foreground-600 shrink-0">
             #{subtitle[0]}
           </span>
 
           <span
-            className="line-clamp-2 break-all font-semibold"
+            className="line-clamp-2 font-semibold break-all"
             title={overflow ? subtitle[1] : undefined}
             ref={titleRef}
           >
@@ -86,7 +86,7 @@ export const SubtitleItem: React.FC<SubtitleItemProps> = ({
 
         <div
           className={cn(
-            'shrink-0 px-1 text-foreground-500 dark:text-foreground-600',
+            'text-foreground-500 dark:text-foreground-600 shrink-0 px-1',
             'rotate-0 data-[open=true]:rotate-180',
             'transition-transform'
           )}
@@ -105,7 +105,7 @@ export const SubtitleItem: React.FC<SubtitleItemProps> = ({
           exit="exit"
           variants={transitionVariants}
         >
-          <div className="border-t-1 border-foreground-200 p-1.5">
+          <div className="border-foreground-200 border-t-1 p-1.5">
             <SubtitleDetail title={title} subtitle={subtitle} ref={detailRef} />
           </div>
         </m.div>

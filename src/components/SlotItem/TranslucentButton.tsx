@@ -1,7 +1,7 @@
 import type { StateSlotDetail } from '@/ncoverlay/state'
 
-import { useEffect, useState, useCallback } from 'react'
-import { Button, cn } from '@nextui-org/react'
+import { useEffect, useState } from 'react'
+import { Button, cn } from '@heroui/react'
 import { BlendIcon } from 'lucide-react'
 
 import { ncoState } from '@/hooks/useNco'
@@ -14,25 +14,25 @@ export type TranslucentButton = {
   translucent: StateSlotDetail['translucent']
 }
 
-export const TranslucentButton: React.FC<TranslucentButton> = ({
+export function TranslucentButton({
   id,
   hidden,
   translucent,
-}) => {
+}: TranslucentButton) {
   const [tmpTranslucent, setTmpTranslucent] = useState(false)
 
   useEffect(() => {
     setTmpTranslucent(!!translucent)
   }, [translucent])
 
-  const onPress = useCallback(async () => {
+  async function onPress() {
     setTmpTranslucent((val) => !val)
 
     await ncoState?.update('slotDetails', ['id'], {
       id,
       translucent: !tmpTranslucent,
     })
-  }, [id, tmpTranslucent])
+  }
 
   return (
     <Tooltip

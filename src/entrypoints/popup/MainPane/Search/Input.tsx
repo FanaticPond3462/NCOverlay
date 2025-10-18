@@ -1,5 +1,5 @@
 import { useEffect, useState, useImperativeHandle } from 'react'
-import { Button, Input, cn } from '@nextui-org/react'
+import { Button, Input, cn } from '@heroui/react'
 import { Table2Icon, SearchIcon, ChevronDownIcon } from 'lucide-react'
 import { SiNiconico } from '@icons-pack/react-simple-icons'
 
@@ -22,28 +22,48 @@ export type SearchInputProps = {
   ref: React.Ref<SearchInputHandle>
 }
 
-export const SearchInput: React.FC<SearchInputProps> = ({
-  isDisabled,
-  onSearch,
-  ref,
-}) => {
+export function SearchInput({ isDisabled, onSearch, ref }: SearchInputProps) {
   const [source, setSource] = useState<SearchSource>('niconico')
   const [value, setValue] = useState('')
+  const [isComposing, setIsComposing] = useState(false)
   const [isNiconicoOptionsOpen, setIsNiconicoOptionsOpen] = useState(false)
 
   const isNiconico = source === 'niconico'
   const isSyobocal = source === 'syobocal'
 
+  const isSearchable = value.trim() && !isDisabled
+
+  function search() {
+    onSearch({
+      source,
+      value: value.trim(),
+    })
+  }
+
   useEffect(() => {
     ncoState?.get('info').then((info) => {
       if (!info) return
 
+      const { input } = info
+
       let initValue: string | undefined
 
-      if (isNiconico) {
-        initValue = info.rawText
+      if (typeof input === 'string') {
+        initValue = input
+      } else if (isNiconico) {
+        initValue =
+          [
+            input?.titleStripped,
+            input?.season?.text,
+            input?.isSingleEpisode
+              ? input.episode?.text
+              : input?.episodes?.map((v) => v.text).join(input.episodesDivider),
+            input?.subtitleStripped,
+          ]
+            .filter(Boolean)
+            .join(' ') || input?.input
       } else if (isSyobocal) {
-        initValue = info.workTitle ?? info.title ?? info.rawText
+        initValue = input?.titleStripped || input?.input
       }
 
       if (initValue) {
@@ -62,10 +82,10 @@ export const SearchInput: React.FC<SearchInputProps> = ({
         <div className="flex w-full flex-row">
           <Select
             classNames={{
-              base: 'w-9 min-w-9 max-w-9',
+              base: 'w-9 max-w-9 min-w-9',
               label: 'hidden',
               trigger: 'block rounded-r-none px-0 [&>svg]:hidden',
-              innerWrapper: 'w-full',
+              innerWrapper: 'size-full',
               popoverContent: 'w-56',
             }}
             size="sm"
@@ -97,7 +117,7 @@ export const SearchInput: React.FC<SearchInputProps> = ({
               label: 'hidden',
               mainWrapper: 'w-full',
               inputWrapper: [
-                'border-1 border-x-0 border-divider',
+                'border-divider border-1 border-x-0',
                 'shadow-none',
               ],
               input: 'pr-5',
@@ -116,6 +136,13 @@ export const SearchInput: React.FC<SearchInputProps> = ({
             }
             value={value}
             onValueChange={setValue}
+            onKeyDown={(evt) => {
+              if (evt.key === 'Enter' && !isComposing && isSearchable) {
+                search()
+              }
+            }}
+            onCompositionStart={() => setIsComposing(true)}
+            onCompositionEnd={() => setIsComposing(false)}
           />
 
           <Button
@@ -124,13 +151,8 @@ export const SearchInput: React.FC<SearchInputProps> = ({
             variant="solid"
             color="primary"
             isIconOnly
-            isDisabled={!value.trim() || isDisabled}
-            onPress={() => {
-              onSearch({
-                source,
-                value: value.trim(),
-              })
-            }}
+            isDisabled={!isSearchable}
+            onPress={search}
           >
             <SearchIcon className="size-4" />
           </Button>

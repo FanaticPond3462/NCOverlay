@@ -1,7 +1,7 @@
-import type { JikkyoChannelId } from '@midra/nco-api/types/constants'
+import type { JikkyoChannelId } from '@midra/nco-utils/types/api/constants'
 import type { SettingsKey, SettingItems } from '@/types/storage'
 
-import { JIKKYO_CHANNELS } from '@midra/nco-api/constants'
+import { JIKKYO_CHANNELS } from '@midra/nco-utils/api/constants'
 import { VOD_KEYS } from '../vods'
 
 /** 設定のデフォルト値 */
@@ -24,6 +24,7 @@ export const SETTINGS_DEFAULT: SettingItems = {
   'settings:comment:jikkyoChannelIds': Object.keys(
     JIKKYO_CHANNELS
   ) as JikkyoChannelId[],
+  'settings:comment:hideAssistedComments': false,
 
   // NG設定
   'settings:ng:words': [],

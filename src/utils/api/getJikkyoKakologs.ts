@@ -1,16 +1,16 @@
 import type { V1Thread } from '@xpadev-net/niconicomments'
-import type { JikkyoChannelId } from '@midra/nco-api/types/constants'
+import type { JikkyoChannelId } from '@midra/nco-utils/types/api/constants'
 
 import { KAWAII_REGEXP } from '@/constants'
 
-import { ncoApiProxy } from '@/proxy/nco-api/extension'
+import { ncoApiProxy } from '@/proxy/nco-utils/api/extension'
 
-import { findMarkers } from './findMarkers'
+import { findMarkers } from '@/utils/extension/findMarkers'
 
 /**
  * ニコニコ実況 過去ログを取得
  */
-export const getJikkyoKakologs = async (
+export async function getJikkyoKakologs(
   params: {
     jkChId: JikkyoChannelId
     starttime: number | Date
@@ -22,7 +22,7 @@ export const getJikkyoKakologs = async (
     markers: (number | null)[]
     kawaiiCount: number
   } | null)[]
-> => {
+> {
   // 過去ログ取得
   const kakologs = await Promise.all(
     params.map(({ jkChId, starttime, endtime }) => {

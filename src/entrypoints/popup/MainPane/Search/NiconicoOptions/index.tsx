@@ -1,6 +1,6 @@
 import type { Variants } from 'framer-motion'
 
-import { TRANSITION_VARIANTS } from '@nextui-org/framer-utils'
+import { TRANSITION_VARIANTS } from '@heroui/framer-utils'
 import {
   AnimatePresence,
   LazyMotion,
@@ -24,10 +24,7 @@ export type NiconicoOptionsProps = {
   isDisabled?: boolean
 }
 
-export const NiconicoOptions: React.FC<NiconicoOptionsProps> = ({
-  isOpen,
-  isDisabled,
-}) => {
+export function NiconicoOptions({ isOpen, isDisabled }: NiconicoOptionsProps) {
   const willChange = useWillChange()
 
   return (

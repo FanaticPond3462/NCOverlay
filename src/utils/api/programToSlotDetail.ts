@@ -1,16 +1,18 @@
-import type { SyoboCalProgram } from '@midra/nco-api/types/syobocal/json'
-import type { SyoboCalProgramDb } from '@midra/nco-api/types/syobocal/db'
+import type { SyoboCalProgram } from '@midra/nco-utils/types/api/syobocal/json'
+import type { SyoboCalProgramDb } from '@midra/nco-utils/types/api/syobocal/db'
 import type { StateSlotDetailJikkyo } from '@/ncoverlay/state'
 
-import { syobocalToJikkyoChId } from '@midra/nco-api/utils/syobocalToJikkyoChId'
+import { syobocalToJikkyoChId } from '@midra/nco-utils/api/utils/syobocalToJikkyoChId'
 
-const isInteger = (str: string) => /^\d+$/.test(str)
+function isInteger(str: string) {
+  return /^\d+$/.test(str)
+}
 
-export const programToSlotDetail = (
+export function programToSlotDetail(
   title: string,
   program: SyoboCalProgram | SyoboCalProgramDb,
   detail?: Partial<StateSlotDetailJikkyo>
-): StateSlotDetailJikkyo => {
+): StateSlotDetailJikkyo {
   let starttime: number
   let endtime: number
 

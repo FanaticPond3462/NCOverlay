@@ -8,15 +8,15 @@ import type {
 import { logger } from '@/utils/logger'
 import { settings } from '@/utils/settings/page'
 
-export const execPlugins = async <VodKey extends PluginVodKey>(
+export async function execPlugins<VodKey extends PluginVodKey>(
   vod: VodKey,
   plugins: Plugins<VodKey>
-) => {
+) {
   const enabledVods = await settings.get('settings:vods')
 
   if (!enabledVods.includes(vod)) return
 
-  logger.log(`plugin-${vod}.js`)
+  logger.log('plugin', vod)
 
   const pluginIds = Object.keys(plugins) as PluginId<VodKey>[]
   const disablePlugins = new Map<PluginId<VodKey>, () => void>()
@@ -27,13 +27,13 @@ export const execPlugins = async <VodKey extends PluginVodKey>(
 
       // プラグイン ON
       if (keys.includes(pluginKey) && !disablePlugins.has(id)) {
-        logger.log(`plugin (enable): ${id}`)
+        logger.log('plugin (enable)', id)
 
         disablePlugins.set(id, plugins[id]())
       }
       // プラグイン OFF
       else if (!keys.includes(pluginKey) && disablePlugins.has(id)) {
-        logger.log(`plugin (disable): ${id}`)
+        logger.log('plugin (disable)', id)
 
         disablePlugins.get(id)!()
         disablePlugins.delete(id)

@@ -5,7 +5,7 @@ import { Layout } from '@/components/Layout'
 import { MainPane } from './MainPane'
 import { SidePane } from './SidePane'
 
-const App: React.FC = () => {
+function App() {
   const isActive = !!ncoState
   const height = isActive ? 507 : 458
 
@@ -14,7 +14,7 @@ const App: React.FC = () => {
       <div className="flex size-fit flex-row">
         {isActive && (
           <div
-            className="border-r-1 border-foreground-200"
+            className="border-foreground-200 border-r-1"
             style={{
               width: 430,
               height,

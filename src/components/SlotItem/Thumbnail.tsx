@@ -1,9 +1,9 @@
-import type { JikkyoChannelId } from '@midra/nco-api/types/constants'
+import type { JikkyoChannelId } from '@midra/nco-utils/types/api/constants'
 import type { StateSlotDetail } from '@/ncoverlay/state'
 
-import { Image, cn } from '@nextui-org/react'
+import { Image, cn } from '@heroui/react'
 
-import { JIKKYO_CHANNELS } from '@midra/nco-api/constants'
+import { JIKKYO_CHANNELS } from '@midra/nco-utils/api/constants'
 
 import { SourceBadge } from './SourceBadge'
 import { AutoLoadedBadge } from './AutoLoadedBadge'
@@ -19,14 +19,14 @@ export type ThumbnailProps = {
   isSearch?: boolean
 }
 
-export const Thumbnail: React.FC<ThumbnailProps> = ({
+export function Thumbnail({
   id,
   type,
   offsetMs,
   isAutoLoaded,
   info,
   isSearch,
-}) => {
+}: ThumbnailProps) {
   let thumbnail: React.JSX.Element | undefined
 
   if (type === 'jikkyo') {
@@ -34,7 +34,7 @@ export const Thumbnail: React.FC<ThumbnailProps> = ({
 
     // 実況のチャンネル情報
     thumbnail = (
-      <div className="h-full rounded-lg bg-content3 p-[1px]">
+      <div className="bg-content3 h-full rounded-lg p-[1px]">
         <div
           className={cn(
             'relative',
@@ -65,7 +65,7 @@ export const Thumbnail: React.FC<ThumbnailProps> = ({
     thumbnail = (
       <Image
         classNames={{
-          wrapper: 'h-full rounded-lg bg-foreground-300 p-[1px]',
+          wrapper: 'bg-foreground-300 h-full rounded-lg p-[1px]',
           img: 'aspect-video h-full rounded-lg object-cover',
         }}
         src={info.thumbnail}
@@ -80,7 +80,7 @@ export const Thumbnail: React.FC<ThumbnailProps> = ({
 
       <div
         className={cn(
-          'absolute left-[2px] top-[2px] z-10',
+          'absolute top-[2px] left-[2px] z-10',
           'flex flex-col items-start gap-[1px]'
         )}
       >
@@ -99,7 +99,7 @@ export const Thumbnail: React.FC<ThumbnailProps> = ({
 
       {/* 長さ */}
       <Duration
-        className="absolute bottom-[2px] right-[2px] z-10"
+        className="absolute right-[2px] bottom-[2px] z-10"
         duration={info.duration}
       />
     </>

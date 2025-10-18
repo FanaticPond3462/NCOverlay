@@ -1,7 +1,6 @@
 import type { SettingsKey } from '@/types/storage'
 
-import { memo } from 'react'
-import { Divider } from '@nextui-org/react'
+import { Divider } from '@heroui/react'
 
 import { SETTINGS_INIT_DATA } from '@/constants/settings/init-data'
 
@@ -30,10 +29,10 @@ const QUICKPANEL_ITEM_KEYS: SettingsKey[] = [
 /**
  * クイックパネル
  */
-export const QuickPanel: React.FC = memo(() => {
+export function QuickPanel() {
   return (
     <div className="flex h-full flex-col">
-      <div className="flex flex-row border-b-1 border-foreground-200 bg-content1">
+      <div className="border-foreground-200 bg-content1 flex flex-row border-b-1">
         <ReloadButton />
 
         <Divider orientation="vertical" />
@@ -67,4 +66,4 @@ export const QuickPanel: React.FC = memo(() => {
       </div>
     </div>
   )
-})
+}

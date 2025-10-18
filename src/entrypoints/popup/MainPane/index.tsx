@@ -1,5 +1,5 @@
-import { memo } from 'react'
-import { Tabs, Tab } from '@nextui-org/react'
+import { useEffect, useState } from 'react'
+import { Tabs, Tab } from '@heroui/react'
 import { SearchIcon, LayoutGridIcon, SettingsIcon } from 'lucide-react'
 
 import { Search } from './Search'
@@ -8,42 +8,57 @@ import { Settings } from './Settings'
 
 const tabItems: {
   key: string
-  icon: React.FC<React.ComponentProps<'svg'>>
+  Icon: (props: React.ComponentProps<'svg'>) => React.ReactNode
   title: string
   children: React.ReactNode
 }[] = [
   {
     key: 'search',
     title: '検索',
-    icon: SearchIcon,
+    Icon: SearchIcon,
     children: <Search />,
   },
   {
     key: 'quickpanel',
     title: 'クイックパネル',
-    icon: LayoutGridIcon,
+    Icon: LayoutGridIcon,
     children: <QuickPanel />,
   },
   {
     key: 'settings',
     title: '設定',
-    icon: SettingsIcon,
+    Icon: SettingsIcon,
     children: <Settings />,
   },
 ]
 
+export type MainPaneProps = {
+  quickpanel?: boolean
+}
+
 /**
  * メイン
  */
-export const MainPane: React.FC<{
-  quickpanel?: boolean
-}> = memo(({ quickpanel }) => {
+export function MainPane({ quickpanel }: MainPaneProps) {
+  const [selectedKey, setSelectedKey] = useState('quickpanel')
+  const [disableAnimation, setDisableAnimation] = useState(true)
+
+  useEffect(() => {
+    if (!quickpanel) return
+
+    const timeoutId = setTimeout(() => {
+      setDisableAnimation(false)
+    }, 50)
+
+    return () => clearInterval(timeoutId)
+  }, [quickpanel])
+
   return (
     <div className="flex size-full flex-col">
       {quickpanel ? (
         <Tabs
           classNames={{
-            base: 'border-b-1 border-foreground-200 bg-content1 p-2',
+            base: 'border-foreground-200 bg-content1 border-b-1 p-2',
             tabList: 'bg-content1 p-0',
             cursor: 'rounded-full',
             panel: 'h-full overflow-hidden p-0',
@@ -52,10 +67,12 @@ export const MainPane: React.FC<{
           radius="none"
           fullWidth
           destroyInactiveTabPanel={false}
-          defaultSelectedKey="quickpanel"
+          disableAnimation={disableAnimation}
+          selectedKey={selectedKey}
+          onSelectionChange={(key) => setSelectedKey(key as string)}
           items={tabItems}
         >
-          {({ key, title, icon: Icon, children }) => (
+          {({ key, title, Icon, children }) => (
             <Tab
               key={key}
               title={
@@ -76,4 +93,4 @@ export const MainPane: React.FC<{
       )}
     </div>
   )
-})
+}

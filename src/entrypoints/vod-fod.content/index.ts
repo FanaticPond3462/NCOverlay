@@ -1,6 +1,6 @@
 import type { VodKey } from '@/types/constants'
 
-import { defineContentScript } from 'wxt/sandbox'
+import { defineContentScript } from '#imports'
 
 import { MATCHES } from '@/constants/matches'
 
@@ -8,7 +8,7 @@ import { logger } from '@/utils/logger'
 import { checkVodEnable } from '@/utils/extension/checkVodEnable'
 
 import { getCookie } from '@/utils/dom/getCookie'
-import { ncoApiProxy } from '@/proxy/nco-api/extension'
+import { ncoApiProxy } from '@/proxy/nco-utils/api/extension'
 
 import { NCOPatcher } from '@/ncoverlay/patcher'
 
@@ -22,10 +22,10 @@ export default defineContentScript({
   main: () => void main(),
 })
 
-const main = async () => {
+async function main() {
   if (!(await checkVodEnable(vod))) return
 
-  logger.log(`vod-${vod}.js`)
+  logger.log('vod', vod)
 
   const patcher = new NCOPatcher({
     vod,
@@ -39,7 +39,7 @@ const main = async () => {
 
       const episode = await ncoApiProxy.fod.episode(id, token)
 
-      logger.log('fod.episode:', episode)
+      logger.log('fod.episode', episode)
 
       if (!episode) {
         return null
@@ -50,11 +50,16 @@ const main = async () => {
 
       const duration = nco.renderer.video.duration ?? 0
 
-      logger.log('workTitle:', workTitle)
-      logger.log('episodeTitle:', episodeTitle)
-      logger.log('duration:', duration)
+      logger.log('workTitle', workTitle)
+      logger.log('episodeTitle', episodeTitle)
+      logger.log('duration', duration)
 
-      return workTitle ? { workTitle, episodeTitle, duration } : null
+      return workTitle
+        ? {
+            input: `${workTitle} ${episodeTitle}`,
+            duration,
+          }
+        : null
     },
     appendCanvas: (video, canvas) => {
       video.insertAdjacentElement('afterend', canvas)
@@ -68,9 +73,11 @@ const main = async () => {
   const obs = new MutationObserver(() => {
     obs.disconnect()
 
-    if (patcher.nco && !document.body.contains(patcher.nco.renderer.video)) {
-      patcher.dispose()
-    } else if (!patcher.nco) {
+    if (patcher.nco) {
+      if (!patcher.nco.renderer.video.checkVisibility()) {
+        patcher.dispose()
+      }
+    } else {
       if (location.pathname.startsWith('/title/')) {
         const video = document.body.querySelector<HTMLVideoElement>(
           '#video_container > video[fpkey="videoPlayer"][src]'

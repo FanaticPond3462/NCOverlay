@@ -1,8 +1,8 @@
-import type { Permissions } from 'wxt/browser'
+import type { Permissions } from 'webextension-polyfill'
 
 import { webext } from '@/utils/webext'
 
-export default async () => {
+export default function () {
   // 権限を要求 (Firefoxのみ)
   if (webext.isFirefox) {
     const manifest = webext.runtime.getManifest()
@@ -10,15 +10,15 @@ export default async () => {
       origins: manifest.host_permissions,
     }
 
-    const permitted = await webext.permissions.contains(permissions)
+    webext.permissions.contains(permissions).then((permitted) => {
+      if (permitted) return
 
-    if (!permitted) {
-      const requestPermissions = async () => {
+      async function requestPermissions() {
         const permitted = await webext.permissions.request(permissions)
 
         if (permitted) {
           webext.action.setPopup({
-            popup: manifest.action?.default_popup ?? '',
+            popup: manifest.action!.default_popup!,
           })
           webext.action.onClicked.removeListener(requestPermissions)
         }
@@ -26,6 +26,6 @@ export default async () => {
 
       webext.action.setPopup({ popup: '' })
       webext.action.onClicked.addListener(requestPermissions)
-    }
+    })
   }
 }

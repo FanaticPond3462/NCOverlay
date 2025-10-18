@@ -5,10 +5,10 @@ import { MARKERS } from '@/constants/markers'
 /**
  * マーカーの位置を探す
  */
-export const findMarkers = (threads: V1Thread[]): (number | null)[] => {
+export function findMarkers(threads: V1Thread[]): (number | null)[] {
   const comments = threads
     .flatMap((thread) => thread.comments)
-    .sort((cmtA, cmtB) => cmtA.vposMs - cmtB.vposMs)
+    .sort((a, b) => a.vposMs - b.vposMs)
 
   return MARKERS.map(({ regexp, range }) => {
     let tmpCount = 0

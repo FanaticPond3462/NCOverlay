@@ -1,6 +1,6 @@
 import type { StateSlotDetail } from '@/ncoverlay/state'
 
-import { Button, cn } from '@nextui-org/react'
+import { Button, cn } from '@heroui/react'
 import { Trash2Icon } from 'lucide-react'
 
 export type ButtonsOverlayProps = {
@@ -8,10 +8,7 @@ export type ButtonsOverlayProps = {
   onRemove: () => void
 }
 
-export const ButtonsOverlay: React.FC<ButtonsOverlayProps> = ({
-  status,
-  onRemove,
-}) => {
+export function ButtonsOverlay({ status, onRemove }: ButtonsOverlayProps) {
   if (status !== 'ready' && status !== 'error') return
 
   return (
@@ -25,7 +22,7 @@ export const ButtonsOverlay: React.FC<ButtonsOverlayProps> = ({
       {/* 削除 */}
       <Button
         className={cn(
-          'absolute right-[1px] top-[1px]',
+          'absolute top-[1px] right-[1px]',
           '!size-6 min-h-0 min-w-0',
           'border-1 border-white/80'
         )}

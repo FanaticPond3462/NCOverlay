@@ -1,6 +1,6 @@
 import type { StateSlotDetail } from '@/ncoverlay/state'
 
-import { cn } from '@nextui-org/react'
+import { cn } from '@heroui/react'
 import { CalendarDaysIcon } from 'lucide-react'
 
 import { formatDate } from '@/utils/format'
@@ -10,7 +10,7 @@ export type DateTimeProps = {
   isSearch?: boolean
 }
 
-export const DateTime: React.FC<DateTimeProps> = ({ infoDate, isSearch }) => {
+export function DateTime({ infoDate, isSearch }: DateTimeProps) {
   return (
     <div
       className={cn(

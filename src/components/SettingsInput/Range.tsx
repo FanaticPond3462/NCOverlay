@@ -2,7 +2,7 @@ import type { StorageItems, SettingsKey } from '@/types/storage'
 import type { SettingsInputBaseProps } from '.'
 
 import { useEffect, useState } from 'react'
-import { Slider, cn } from '@nextui-org/react'
+import { Slider, cn } from '@heroui/react'
 
 import { SETTINGS_DEFAULT } from '@/constants/settings/default'
 
@@ -24,7 +24,7 @@ export type Props<K extends Key = Key> = SettingsInputBaseProps<
   }
 >
 
-export const Input: React.FC<Props> = (props) => {
+export function Input(props: Props) {
   const [state, setState] = useState<number>(
     SETTINGS_DEFAULT[props.settingsKey]
   )
@@ -67,7 +67,7 @@ export const Input: React.FC<Props> = (props) => {
       {props.description && (
         <span
           className={cn(
-            'mb-2 whitespace-pre-wrap text-tiny',
+            'text-tiny mb-2 whitespace-pre-wrap',
             'text-foreground-500 dark:text-foreground-600'
           )}
         >

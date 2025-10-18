@@ -1,4 +1,4 @@
-import { Button, Pagination as NextUIPagination } from '@nextui-org/react'
+import { Button, Pagination as HeroUIPagination } from '@heroui/react'
 import { ChevronLeftIcon, ChevronRightIcon } from 'lucide-react'
 
 export type PaginationProps = {
@@ -8,12 +8,12 @@ export type PaginationProps = {
   onPageChange: (page: number) => void
 }
 
-export const Pagination: React.FC<PaginationProps> = ({
+export function Pagination({
   total,
   page,
   isDisabled,
   onPageChange,
-}) => {
+}: PaginationProps) {
   return (
     <div className="flex flex-row justify-between">
       <Button
@@ -26,13 +26,13 @@ export const Pagination: React.FC<PaginationProps> = ({
         <ChevronLeftIcon className="size-4" />
       </Button>
 
-      <NextUIPagination
+      <HeroUIPagination
         classNames={{
           base: '-m-2 p-2',
           wrapper: 'shadow-none',
           item: [
             'bg-default/40 shadow-none',
-            '[&:first-of-type:last-of-type]:rounded-full',
+            '[&:first-of-type:last-of-type]:rounded-full!',
           ],
         }}
         size="sm"

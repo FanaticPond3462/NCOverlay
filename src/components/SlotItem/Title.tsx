@@ -1,12 +1,11 @@
 import type { StateSlotDetail, StateSlotDetailJikkyo } from '@/ncoverlay/state'
 
-import { useMemo } from 'react'
-import { Link, cn } from '@nextui-org/react'
+import { Link, cn } from '@heroui/react'
 import { useOverflowDetector } from 'react-detectable-overflow'
 
 import { ProgramIcons } from '@/entrypoints/popup/SidePane/JikkyoEpgSelector/Program'
 
-const programIconsRegExp = /^(?:(?:🈞|🈟|🈡)\s?)+/
+const programIconsRegExp = /^(?:[🈟🈡🈞]\s?)+/
 
 export type TitleProps = {
   id: StateSlotDetail['info']['id']
@@ -15,46 +14,31 @@ export type TitleProps = {
   isSearch?: boolean
 }
 
-export const Title: React.FC<TitleProps> = ({
-  id,
-  source,
-  title,
-  isSearch,
-}) => {
+const BASE_URLS: Record<
+  'niconico' | NonNullable<StateSlotDetailJikkyo['info']['source']>,
+  string
+> = {
+  niconico: 'https://www.nicovideo.jp/watch/',
+  syobocal: 'https://cal.syoboi.jp/tid/',
+  tver: 'https://tver.jp/series/',
+  nhkPlus: 'https://plus.nhk.jp/watch/st/',
+}
+
+export function Title({ id, source, title, isSearch }: TitleProps) {
   const { ref, overflow } = useOverflowDetector()
 
-  const url = useMemo(() => {
-    if (!id) return null
-
-    let baseUrl: string
-
-    if (source === 'syobocal') {
-      baseUrl = 'https://cal.syoboi.jp/tid/'
-    } else if (source === 'tver') {
-      baseUrl = 'https://tver.jp/series/'
-    } else if (source === 'nhkPlus') {
-      baseUrl = 'https://plus.nhk.jp/watch/st/'
-    } else {
-      baseUrl = 'https://www.nicovideo.jp/watch/'
-    }
-
-    return new URL(id, baseUrl)
-  }, [id, source])
-
-  const icon = useMemo(() => {
-    const prefix = title.match(programIconsRegExp)?.[0]
-
-    return {
-      revival: prefix?.includes('🈞'),
-      new: prefix?.includes('🈟'),
-      last: prefix?.includes('🈡'),
-    }
-  }, [title])
+  const url = id && new URL(id, source ? BASE_URLS[source] : BASE_URLS.niconico)
+  const prefix = title.match(programIconsRegExp)?.[0]
+  const icon = {
+    new: prefix?.includes('🈟'),
+    last: prefix?.includes('🈡'),
+    revival: prefix?.includes('🈞'),
+  }
 
   const element = (
     <span
       className={cn(
-        'line-clamp-3 whitespace-pre-wrap break-all font-semibold',
+        'line-clamp-3 font-semibold break-all whitespace-pre-wrap',
         isSearch ? 'text-mini' : 'text-tiny'
       )}
       title={overflow ? title : undefined}

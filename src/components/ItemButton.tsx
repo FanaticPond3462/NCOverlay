@@ -1,12 +1,12 @@
-import type { ButtonProps } from '@nextui-org/react'
+import type { ButtonProps } from '@heroui/react'
 import type { PopconfirmProps } from '@/components/Popconfirm'
 
-import { Button, cn } from '@nextui-org/react'
+import { Button, cn } from '@heroui/react'
 
 import { ItemLabel } from '@/components/ItemLabel'
 import { Popconfirm } from '@/components/Popconfirm'
 
-export const ItemButton: React.FC<{
+export type ItemButtonProps = {
   title: React.ReactNode
   description?: React.ReactNode
   button: {
@@ -22,7 +22,9 @@ export const ItemButton: React.FC<{
     title: React.ReactNode
     description?: React.ReactNode
   }
-}> = (props) => {
+}
+
+export function ItemButton(props: ItemButtonProps) {
   const button = (
     <Button
       className={cn(

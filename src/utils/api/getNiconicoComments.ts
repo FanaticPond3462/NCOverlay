@@ -1,18 +1,18 @@
 import type { V1Thread } from '@xpadev-net/niconicomments'
-import type { VideoData } from '@midra/nco-api/types/niconico/video'
+import type { VideoData } from '@midra/nco-utils/types/api/niconico/video'
 
 import { KAWAII_REGEXP } from '@/constants'
 
 import { settings } from '@/utils/settings/extension'
+import { extractNgSettings } from '@/utils/extension/extractNgSettings'
+import { applyNgSettings } from '@/utils/extension/applyNgSetting'
 import { filterNvComment } from '@/utils/api/filterNvComment'
-import { extractNgSettings } from '@/utils/api/extractNgSettings'
-import { applyNgSettings } from '@/utils/api/applyNgSetting'
-import { ncoApiProxy } from '@/proxy/nco-api/extension'
+import { ncoApiProxy } from '@/proxy/nco-utils/api/extension'
 
 /**
  * ニコニコ動画のコメント取得
  */
-export const getNiconicoComments = async (
+export async function getNiconicoComments(
   params: ((
     | VideoData
     | {
@@ -27,7 +27,7 @@ export const getNiconicoComments = async (
     threads: V1Thread[]
     kawaiiCount: number
   } | null)[]
-> => {
+> {
   const useNiconicoCredentials = await settings.get(
     'settings:comment:useNiconicoCredentials'
   )
@@ -53,7 +53,7 @@ export const getNiconicoComments = async (
     videos.map(async (videoData, idx) => {
       if (!videoData) return null
 
-      const nvComment = filterNvComment(videoData.comment)
+      filterNvComment(videoData.comment)
 
       if (1 < amount) {
         const additionals = {
@@ -62,7 +62,7 @@ export const getNiconicoComments = async (
         }
 
         const baseThreadsData = await ncoApiProxy.niconico.threads(
-          nvComment,
+          videoData.comment,
           additionals
         )
         const baseMainThread = baseThreadsData?.threads
@@ -78,11 +78,12 @@ export const getNiconicoComments = async (
           return baseThreadsData
         }
 
-        nvComment.params.targets = nvComment.params.targets.filter((val) => {
-          return (
-            val.fork === baseMainThread.fork && val.id === baseMainThread.id
-          )
-        })
+        videoData.comment.nvComment.params.targets =
+          videoData.comment.nvComment.params.targets.filter((val) => {
+            return (
+              val.fork === baseMainThread.fork && val.id === baseMainThread.id
+            )
+          })
 
         additionals.when = Math.floor(
           new Date(baseMainThread.comments[0].postedAt).getTime() / 1000
@@ -92,7 +93,7 @@ export const getNiconicoComments = async (
 
         while (0 < count--) {
           const threadsData = await ncoApiProxy.niconico.threads(
-            nvComment,
+            videoData.comment,
             additionals
           )
           const mainThread = threadsData?.threads.find((val) => {
@@ -116,7 +117,7 @@ export const getNiconicoComments = async (
 
         return baseThreadsData
       } else {
-        return ncoApiProxy.niconico.threads(nvComment, {
+        return ncoApiProxy.niconico.threads(videoData.comment, {
           when: params[idx].when,
         })
       }
@@ -126,9 +127,15 @@ export const getNiconicoComments = async (
   return threadsData.map((val, idx) => {
     if (!val) return null
 
-    const videoData = videos[idx]!
+    const data = videos[idx]!
 
-    const kawaiiCount = val.threads
+    // コメントのNG設定を適用
+    const threads = applyNgSettings(
+      val.threads,
+      extractNgSettings(data.comment.ng)
+    )
+
+    const kawaiiCount = threads
       .map((thread) => {
         return thread.comments.filter((cmt) => {
           return KAWAII_REGEXP.test(cmt.body)
@@ -136,13 +143,6 @@ export const getNiconicoComments = async (
       })
       .reduce((prev, current) => prev + current, 0)
 
-    return {
-      data: videoData,
-      threads: applyNgSettings(
-        val.threads,
-        extractNgSettings(videoData.comment.ng)
-      ),
-      kawaiiCount,
-    }
+    return { data, threads, kawaiiCount }
   })
 }

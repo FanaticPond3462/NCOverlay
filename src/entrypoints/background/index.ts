@@ -1,7 +1,8 @@
 import type { StateKey } from '@/types/storage'
 
-import { defineBackground } from 'wxt/sandbox'
-import { ncoApi } from '@midra/nco-api'
+import { defineBackground } from '#imports'
+import { ncoApi } from '@midra/nco-utils/api'
+import { ncoSearch } from '@midra/nco-utils/search'
 
 import { GITHUB_URL } from '@/constants'
 
@@ -25,17 +26,18 @@ export default defineBackground({
   main: () => void main(),
 })
 
-const main = async () => {
+async function main() {
   logger.log('background.js')
 
   registerProxy('ncoApi', ncoApi, onMessage)
+  registerProxy('ncoSearch', ncoSearch, onMessage)
   registerUtilsMessage()
+
+  // 権限をリクエスト
+  requestPermissions()
 
   // インストール・アップデート時
   webext.runtime.onInstalled.addListener(async ({ reason }) => {
-    // 権限をリクエスト
-    requestPermissions()
-
     switch (reason) {
       case 'install':
         if (import.meta.env.PROD) {
@@ -68,16 +70,17 @@ const main = async () => {
   })
 
   webext.runtime.onConnect.addListener((port) => {
+    const tabId = port.sender?.tab?.id
+
     switch (port.name) {
       // NCOverlayインスタンス作成時
       case 'instance':
-        const tabId = port.sender?.tab?.id
         let ncoId: string | undefined
 
         let intervalId: NodeJS.Timeout
         let timeoutId: NodeJS.Timeout
 
-        const dispose = () => {
+        function dispose() {
           logger.log('dispose()')
 
           // バッジリセット
@@ -130,12 +133,10 @@ const main = async () => {
 
       // サイドパネル
       case 'sidepanel':
-        port.onDisconnect.addListener(async () => {
-          const tab = await webext.getCurrentActiveTab()
-
+        port.onDisconnect.addListener(() => {
           webext.sidePanel.setOptions({
             enabled: false,
-            tabId: tab?.id,
+            tabId,
           })
         })
 
@@ -179,5 +180,5 @@ const main = async () => {
   // サイドパネル
   webext.sidePanel.setOptions({ enabled: false })
 
-  logger.log('settings:', await settings.get())
+  logger.log('settings', await settings.get())
 }

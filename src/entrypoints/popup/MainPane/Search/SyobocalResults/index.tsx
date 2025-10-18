@@ -2,7 +2,7 @@ import type { ScTitleItem } from './TitleItem'
 import type { TitleDetailHandle } from './TitleDetail'
 
 import { useState, useRef } from 'react'
-import { useDisclosure } from '@nextui-org/react'
+import { useDisclosure } from '@heroui/react'
 
 import { TitleItem } from './TitleItem'
 import { TitleDetail } from './TitleDetail'
@@ -11,7 +11,7 @@ export type SyobocalResultsProps = {
   titles: ScTitleItem[]
 }
 
-export const SyobocalResults: React.FC<SyobocalResultsProps> = ({ titles }) => {
+export function SyobocalResults({ titles }: SyobocalResultsProps) {
   const detailRef = useRef<TitleDetailHandle>(null)
 
   const [selectedTitle, setSelectedTitle] = useState<ScTitleItem>()

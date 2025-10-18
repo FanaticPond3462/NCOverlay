@@ -1,5 +1,5 @@
 import type { VodKey, PluginKey, SettingsInitData } from '@/types/constants'
-import type { JikkyoChannelId } from '@midra/nco-api/types/constants'
+import type { JikkyoChannelId } from '@midra/nco-utils/types/api/constants'
 
 import {
   SunMoonIcon,
@@ -11,7 +11,7 @@ import {
   BlocksIcon,
   KeyboardIcon,
 } from 'lucide-react'
-import { JIKKYO_CHANNELS } from '@midra/nco-api/constants'
+import { JIKKYO_CHANNELS } from '@midra/nco-utils/api/constants'
 
 import { VODS } from '@/constants/vods'
 import { PLUGINS } from '@/constants/plugins'
@@ -21,7 +21,7 @@ export const SETTINGS_INIT_DATA: SettingsInitData = [
   {
     id: 'general',
     title: '全般',
-    icon: SlidersHorizontalIcon,
+    Icon: SlidersHorizontalIcon,
     items: [
       {
         settingsKey: 'settings:theme',
@@ -31,17 +31,17 @@ export const SETTINGS_INIT_DATA: SettingsInitData = [
           {
             label: '自動',
             value: 'auto',
-            icon: SunMoonIcon,
+            Icon: SunMoonIcon,
           },
           {
             label: 'ライト',
             value: 'light',
-            icon: SunIcon,
+            Icon: SunIcon,
           },
           {
             label: 'ダーク',
             value: 'dark',
-            icon: MoonIcon,
+            Icon: MoonIcon,
           },
         ],
       },
@@ -91,7 +91,7 @@ export const SETTINGS_INIT_DATA: SettingsInitData = [
   {
     id: 'comment',
     title: 'コメント',
-    icon: MessageSquareTextIcon,
+    Icon: MessageSquareTextIcon,
     items: [
       {
         settingsKey: 'settings:comment:fps',
@@ -161,12 +161,19 @@ export const SETTINGS_INIT_DATA: SettingsInitData = [
         description:
           'ON: ニコニコのNG設定が反映される\nOFF: ニコニコに視聴履歴を反映させない',
       },
+      {
+        settingsKey: 'settings:comment:hideAssistedComments',
+        inputType: 'toggle',
+        label: 'コメントアシストの表示を抑制（β）',
+        description:
+          'コメントアシストと予想されるコメントの表示を抑制します。\n※テンプレコメントも対象になる可能性があります',
+      },
     ],
   },
   {
     id: 'ng',
     title: 'NG設定',
-    icon: MessageSquareOffIcon,
+    Icon: MessageSquareOffIcon,
     items: [
       {
         settingsKey: 'settings:ng:words',
@@ -206,7 +213,7 @@ export const SETTINGS_INIT_DATA: SettingsInitData = [
   {
     id: 'keyboard',
     title: 'キーボード',
-    icon: KeyboardIcon,
+    Icon: KeyboardIcon,
     items: [
       {
         settingsKey: 'settings:kbd:increaseGlobalOffset',
@@ -263,7 +270,7 @@ export const SETTINGS_INIT_DATA: SettingsInitData = [
   {
     id: 'plugins',
     title: 'プラグイン',
-    icon: BlocksIcon,
+    Icon: BlocksIcon,
     items: Object.entries(PLUGINS).map(([key, value]) => ({
       settingsKey: 'settings:plugins',
       inputType: 'checkcard',

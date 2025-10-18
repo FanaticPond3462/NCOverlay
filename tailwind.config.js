@@ -1,15 +1,13 @@
-import type { Config } from 'tailwindcss'
-import type { CustomThemeConfig } from 'tailwindcss/types/config'
-
-import { nextui } from '@nextui-org/react'
+// @ts-check
+import { heroui } from '@heroui/react'
 
 import { themeColorsLight, themeColorsDark, brandColors } from './theme-colors'
 
-const fontSize: CustomThemeConfig['fontSize'] = {
+const fontSize = {
   mini: ['0.6875rem', '0.875rem'],
 }
 
-const size: CustomThemeConfig['width' | 'height'] = {
+const size = {
   mini: fontSize.mini[0],
   tiny: '0.75rem',
   small: '0.875rem',
@@ -17,9 +15,12 @@ const size: CustomThemeConfig['width' | 'height'] = {
   large: '1.125rem',
 }
 
+/**
+ *  @type {import('tailwindcss').Config}
+ */
 export default {
   content: [
-    './node_modules/@nextui-org/theme/dist/**/*.{js,ts,jsx,tsx}',
+    './node_modules/@heroui/theme/dist/**/*.{js,ts,jsx,tsx}',
     './src/**/*.{js,ts,jsx,tsx}',
   ],
   darkMode: 'class',
@@ -35,7 +36,7 @@ export default {
     },
   },
   plugins: [
-    nextui({
+    heroui({
       themes: {
         light: {
           colors: themeColorsLight,
@@ -46,4 +47,4 @@ export default {
       },
     }),
   ],
-} satisfies Config
+}

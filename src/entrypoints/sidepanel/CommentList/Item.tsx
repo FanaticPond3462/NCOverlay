@@ -1,10 +1,6 @@
-import type { SlotsToClasses } from '@nextui-org/react'
-import type {
-  StateSlotDetail,
-  V1ThreadCommentWithType,
-} from '@/ncoverlay/state'
+import type { SlotsToClasses } from '@heroui/react'
+import type { StateSlotDetail, NcoV1ThreadComment } from '@/ncoverlay/state'
 
-import { useMemo } from 'react'
 import {
   Dropdown,
   DropdownTrigger,
@@ -12,7 +8,7 @@ import {
   DropdownSection,
   DropdownItem,
   cn,
-} from '@nextui-org/react'
+} from '@heroui/react'
 import { CopyIcon, PlusIcon, ClockIcon } from 'lucide-react'
 import { useOverflowDetector } from 'react-detectable-overflow'
 
@@ -38,20 +34,21 @@ const COMMENT_WRAPPER_TYPE_CLASSES: {
 
 const COMMENT_CELL_COMMAND_CLASSES: Record<string, string> = {
   // 位置: 上
-  ue: cn('justify-center pb-5 pt-0.5'),
+  ue: cn('justify-center pt-0.5 pb-5'),
   // 位置: 下
-  shita: cn('justify-center pb-0.5 pt-5'),
+  shita: cn('justify-center pt-5 pb-0.5'),
 }
 
 const COMMENT_COMMAND_CLASSES: Record<string, string> = {
   // サイズ: 大
-  big: cn('text-[110%] font-bold'),
+  'big': cn('text-[110%] font-bold'),
   // サイズ: 小
-  small: cn('text-[75%]'),
+  'small': cn('text-[75%]'),
   // 明朝体
-  mincho: cn('font-serif'),
+  'mincho': cn('font-serif'),
   // 半透明
-  _live: cn('opacity-50'),
+  '_live': cn('opacity-50'),
+  'nico:opacity:0.5': cn('opacity-50'),
 }
 
 const NICORU_COLORS: Record<number, string> = {
@@ -61,16 +58,18 @@ const NICORU_COLORS: Record<number, string> = {
   4: 'rgb(252 216 66 / 50%)',
 }
 
-const ItemCell: React.FC<
-  React.PropsWithChildren<React.HTMLAttributes<HTMLDivElement>>
-> = ({ className, ...props }) => {
+type ItemCellProps = React.PropsWithChildren<
+  React.HTMLAttributes<HTMLDivElement>
+>
+
+function ItemCell({ className, ...props }: ItemCellProps) {
   return (
     <div
       {...props}
       className={cn(
         'flex',
         'shrink-0 p-1.5',
-        'border-b-1 border-l-1 border-divider',
+        'border-divider border-b-1 border-l-1',
         'text-small',
         className
       )}
@@ -85,18 +84,18 @@ type ItemCellWithMenuProps = {
   menuElement: React.ReactElement
 }
 
-const ItemCellWithMenu: React.FC<ItemCellWithMenuProps> = ({
+function ItemCellWithMenu({
   classNames,
   style,
   children,
   menuElement,
-}) => {
+}: ItemCellWithMenuProps) {
   return (
     <Dropdown
       classNames={{
         backdrop: 'bg-transparent',
         base: 'max-w-[90vw]',
-        content: 'overflow-hidden border-1 border-foreground-100',
+        content: 'border-foreground-100 overflow-hidden border-1',
       }}
       backdrop="opaque"
     >
@@ -124,145 +123,143 @@ const ItemCellWithMenu: React.FC<ItemCellWithMenuProps> = ({
   )
 }
 
+function getCmtClassAndColor(commands: string[]) {
+  const cmtCellCmdClass: string[] = []
+  const cmtCmdClass: string[] = []
+  let cmtBgColor: string | undefined
+  let cmtFgColor: string | undefined
+
+  commands?.forEach((command) => {
+    if (command === 'white') return
+
+    if (command in COMMENT_CELL_COMMAND_CLASSES) {
+      cmtCellCmdClass.push(COMMENT_CELL_COMMAND_CLASSES[command])
+    } else if (command in COMMENT_COMMAND_CLASSES) {
+      cmtCmdClass.push(COMMENT_COMMAND_CLASSES[command])
+    } else if (
+      command in NICONICO_COLOR_COMMANDS ||
+      COLOR_CODE_REGEXP.test(command)
+    ) {
+      cmtBgColor = NICONICO_COLOR_COMMANDS[command] ?? command
+      cmtFgColor = readableColor(cmtBgColor)
+
+      cmtCmdClass.push(
+        cn('border-foreground-300 m-[-1px] rounded-[5px] border-1 px-1')
+      )
+    }
+  })
+
+  return { cmtCellCmdClass, cmtCmdClass, cmtBgColor, cmtFgColor }
+}
+
 export type ItemProps = {
-  comment: V1ThreadCommentWithType
+  comment: NcoV1ThreadComment
   offsetMs: number
 }
 
-export const Item: React.FC<ItemProps> = ({ comment, offsetMs }) => {
+export function Item({ comment, offsetMs }: ItemProps) {
   const { ref, overflow } = useOverflowDetector()
 
   const { cmtCellCmdClass, cmtCmdClass, cmtBgColor, cmtFgColor } =
-    useMemo(() => {
-      const cmtCellCmdClass: string[] = []
-      const cmtCmdClass: string[] = []
-      let cmtBgColor: string | undefined
-      let cmtFgColor: string | undefined
+    getCmtClassAndColor(comment.commands)
 
-      comment.commands?.forEach((command) => {
-        if (command === 'white') return
+  const displayCommands = comment.commands.filter(
+    (cmd) => !cmd.startsWith('nico:')
+  )
 
-        if (command in COMMENT_CELL_COMMAND_CLASSES) {
-          cmtCellCmdClass.push(COMMENT_CELL_COMMAND_CLASSES[command])
-        } else if (command in COMMENT_COMMAND_CLASSES) {
-          cmtCmdClass.push(COMMENT_COMMAND_CLASSES[command])
-        } else if (
-          command in NICONICO_COLOR_COMMANDS ||
-          COLOR_CODE_REGEXP.test(command)
-        ) {
-          cmtBgColor = NICONICO_COLOR_COMMANDS[command] ?? command
-          cmtFgColor = readableColor(cmtBgColor)
+  const formattedDuration = formatDuration((comment.vposMs + offsetMs) / 1000)
 
-          cmtCmdClass.push(
-            cn('m-[-1px] rounded-[5px] border-1 border-foreground-300 px-1')
-          )
-        }
-      })
+  const formattedDate = formatDate(comment.postedAt)
 
-      return { cmtCellCmdClass, cmtCmdClass, cmtBgColor, cmtFgColor }
-    }, [comment.commands])
-
-  const formattedDuration = useMemo(() => {
-    return formatDuration((comment.vposMs + offsetMs) / 1000)
-  }, [comment.vposMs, offsetMs])
-
-  const formattedDate = useMemo(() => {
-    return formatDate(comment.postedAt)
-  }, [comment.postedAt])
-
-  const nicoruColor = useMemo(() => {
-    if (9 <= comment.nicoruCount) return NICORU_COLORS[4]
-    if (6 <= comment.nicoruCount) return NICORU_COLORS[3]
-    if (3 <= comment.nicoruCount) return NICORU_COLORS[2]
-    if (1 <= comment.nicoruCount) return NICORU_COLORS[1]
-  }, [comment.nicoruCount])
+  const nicoruColor =
+    (9 <= comment.nicoruCount && NICORU_COLORS[4]) ||
+    (6 <= comment.nicoruCount && NICORU_COLORS[3]) ||
+    (3 <= comment.nicoruCount && NICORU_COLORS[2]) ||
+    (1 <= comment.nicoruCount && NICORU_COLORS[1]) ||
+    undefined
 
   // メニュー (コメント)
-  const commentMenu = useMemo(() => {
-    const copyComment = () => {
-      navigator.clipboard.writeText(comment.body)
-    }
-    const copyId = () => {
-      navigator.clipboard.writeText(comment.userId)
-    }
+  function copyComment() {
+    navigator.clipboard.writeText(comment.body)
+  }
+  function copyId() {
+    navigator.clipboard.writeText(comment.userId)
+  }
 
-    const addNgComment = async () => {
-      settings.set('settings:ng:words', [
-        ...(await settings.get('settings:ng:words')),
-        { content: comment.body },
-      ])
-    }
-    const addNgId = async () => {
-      settings.set('settings:ng:ids', [
-        ...(await settings.get('settings:ng:ids')),
-        { content: comment.userId },
-      ])
-    }
+  async function addNgComment() {
+    settings.set('settings:ng:words', [
+      ...(await settings.get('settings:ng:words')),
+      { content: comment.body },
+    ])
+  }
+  async function addNgId() {
+    settings.set('settings:ng:ids', [
+      ...(await settings.get('settings:ng:ids')),
+      { content: comment.userId },
+    ])
+  }
 
-    return (
-      <DropdownMenu variant="flat">
-        <DropdownSection aria-label="アクション" showDivider>
-          <DropdownItem
-            key="copy-comment"
-            startContent={<CopyIcon className="size-4 shrink-0" />}
-            onPress={copyComment}
-          >
-            コメントをコピー
-          </DropdownItem>
+  const commentMenu = (
+    <DropdownMenu variant="flat">
+      <DropdownSection aria-label="アクション" showDivider>
+        <DropdownItem
+          key="copy-comment"
+          startContent={<CopyIcon className="size-4 shrink-0" />}
+          onPress={copyComment}
+        >
+          コメントをコピー
+        </DropdownItem>
 
-          <DropdownItem
-            key="copy-user-id"
-            startContent={<CopyIcon className="size-4 shrink-0" />}
-            onPress={copyId}
-          >
-            ユーザーIDをコピー
-          </DropdownItem>
-        </DropdownSection>
+        <DropdownItem
+          key="copy-user-id"
+          startContent={<CopyIcon className="size-4 shrink-0" />}
+          onPress={copyId}
+        >
+          ユーザーIDをコピー
+        </DropdownItem>
+      </DropdownSection>
 
-        <DropdownSection title="NG設定" className="mb-0">
-          <DropdownItem
-            key="add-comment"
-            startContent={<PlusIcon className="size-4 shrink-0" />}
-            onPress={addNgComment}
-          >
-            コメントを追加
-          </DropdownItem>
+      <DropdownSection title="NG設定" className="mb-0">
+        <DropdownItem
+          key="add-comment"
+          startContent={<PlusIcon className="size-4 shrink-0" />}
+          onPress={addNgComment}
+        >
+          コメントを追加
+        </DropdownItem>
 
-          <DropdownItem
-            key="add-user-id"
-            startContent={<PlusIcon className="size-4 shrink-0" />}
-            onPress={addNgId}
-          >
-            ユーザーIDを追加
-          </DropdownItem>
-        </DropdownSection>
-      </DropdownMenu>
-    )
-  }, [comment.body, comment.userId])
+        <DropdownItem
+          key="add-user-id"
+          startContent={<PlusIcon className="size-4 shrink-0" />}
+          onPress={addNgId}
+        >
+          ユーザーIDを追加
+        </DropdownItem>
+      </DropdownSection>
+    </DropdownMenu>
+  )
 
   // メニュー (再生時間)
-  const timeMenu = useMemo(() => {
-    const adjustGlobalOffset = async () => {
-      const currentTime = (await sendNcoMessage('getCurrentTime', null)) ?? 0
+  async function adjustGlobalOffset() {
+    const currentTime = (await sendNcoMessage('getCurrentTime', null)) ?? 0
 
-      ncoState?.set(
-        'offset',
-        Math.floor((comment.vposMs / 1000) * -1 + currentTime)
-      )
-    }
-
-    return (
-      <DropdownMenu variant="flat">
-        <DropdownItem
-          key="adjust-global-offset"
-          startContent={<ClockIcon className="size-4 shrink-0" />}
-          onPress={adjustGlobalOffset}
-        >
-          オフセットを合わせる
-        </DropdownItem>
-      </DropdownMenu>
+    ncoState?.set(
+      'offset',
+      Math.floor((comment.vposMs / 1000) * -1 + currentTime)
     )
-  }, [comment.vposMs])
+  }
+
+  const timeMenu = (
+    <DropdownMenu variant="flat">
+      <DropdownItem
+        key="adjust-global-offset"
+        startContent={<ClockIcon className="size-4 shrink-0" />}
+        onPress={adjustGlobalOffset}
+      >
+        オフセットを合わせる
+      </DropdownItem>
+    </DropdownMenu>
+  )
 
   return (
     <div className="flex flex-row">
@@ -275,8 +272,8 @@ export const Item: React.FC<ItemProps> = ({ comment, offsetMs }) => {
             'before:absolute before:left-0',
             'before:block',
             'before:h-full before:w-1',
-            'before:border-b-1 before:border-content1',
-            COMMENT_WRAPPER_TYPE_CLASSES[comment.type],
+            'before:border-content1 before:border-b-1',
+            COMMENT_WRAPPER_TYPE_CLASSES[comment._nco.slotType],
           ],
           cell: [
             'ml-1 w-[calc(100%-0.25rem)]',
@@ -333,7 +330,7 @@ export const Item: React.FC<ItemProps> = ({ comment, offsetMs }) => {
         className="w-full font-mono"
         style={{ backgroundColor: nicoruColor }}
       >
-        <span className="line-clamp-1">{comment.commands.join(' ')}</span>
+        <span className="line-clamp-1">{displayCommands.join(' ')}</span>
       </ItemCell>
     </div>
   )

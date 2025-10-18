@@ -1,19 +1,15 @@
-import type { TooltipPlacement } from '@nextui-org/react'
+import type { TooltipPlacement } from '@heroui/react'
 
-import { Tooltip as NextUITooltip } from '@nextui-org/react'
+import { Tooltip as HeroUITooltip } from '@heroui/react'
 
 export type TooltipProps = React.PropsWithChildren<{
   placement?: TooltipPlacement
   content?: React.ReactNode
 }>
 
-export const Tooltip: React.FC<TooltipProps> = ({
-  placement,
-  content,
-  children,
-}) => {
+export function Tooltip({ placement, content, children }: TooltipProps) {
   return content ? (
-    <NextUITooltip
+    <HeroUITooltip
       classNames={{
         base: 'pointer-events-none max-w-48',
         content: 'whitespace-pre-wrap',
@@ -27,7 +23,7 @@ export const Tooltip: React.FC<TooltipProps> = ({
       content={content}
     >
       {children}
-    </NextUITooltip>
+    </HeroUITooltip>
   ) : (
     children
   )

@@ -1,7 +1,7 @@
 import type { StorageItems, SettingsKey } from '@/types/storage'
 import type { SettingsInputBaseProps } from '.'
 
-import { Input as NextUIInput } from '@nextui-org/react'
+import { Input as HeroUIInput } from '@heroui/react'
 
 import { useSettings } from '@/hooks/useSettings'
 
@@ -11,14 +11,14 @@ export type Key = {
 
 export type Props<K extends Key = Key> = SettingsInputBaseProps<K, 'text', {}>
 
-export const Input: React.FC<Props> = (props) => {
+export function Input(props: Props) {
   const [value, setValue] = useSettings(props.settingsKey)
 
   return (
-    <NextUIInput
+    <HeroUIInput
       classNames={{
         base: 'py-2',
-        inputWrapper: 'border-1 border-divider shadow-none',
+        inputWrapper: 'border-divider border-1 shadow-none',
       }}
       labelPlacement="outside"
       label={props.label}

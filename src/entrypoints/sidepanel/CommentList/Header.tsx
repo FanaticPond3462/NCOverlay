@@ -1,9 +1,11 @@
-import { cn } from '@nextui-org/react'
+import { cn } from '@heroui/react'
 import { SmileIcon } from 'lucide-react'
 
-const HeaderCell: React.FC<
-  React.PropsWithChildren<React.HTMLAttributes<HTMLDivElement>>
-> = ({ className, ...props }) => {
+type HeaderCellProps = React.PropsWithChildren<
+  React.HTMLAttributes<HTMLDivElement>
+>
+
+function HeaderCell({ className, ...props }: HeaderCellProps) {
   return (
     <div
       {...props}
@@ -11,7 +13,7 @@ const HeaderCell: React.FC<
         'flex items-center justify-center',
         'shrink-0 py-1.5',
         'bg-content2 text-content2-foreground',
-        'border-b-1 border-divider',
+        'border-divider border-b-1',
         'text-tiny font-semibold',
         '[&:not(:first-child)]:border-l-1',
         className
@@ -20,7 +22,7 @@ const HeaderCell: React.FC<
   )
 }
 
-export const Header: React.FC = () => {
+export function Header() {
   return (
     <div className="sticky top-0 z-10 flex flex-row">
       <HeaderCell className="w-[calc(100%-5rem)]">コメント</HeaderCell>

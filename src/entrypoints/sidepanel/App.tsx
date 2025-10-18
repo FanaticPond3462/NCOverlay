@@ -1,4 +1,4 @@
-import { cn } from '@nextui-org/react'
+import { cn } from '@heroui/react'
 
 import { useNcoStateReady } from '@/hooks/useNco'
 
@@ -7,14 +7,14 @@ import { PositionControl } from '@/components/PositionControl'
 
 import { CommentList } from './CommentList'
 
-const App: React.FC = () => {
+function App() {
   const ready = useNcoStateReady()
 
   return (
     <Layout className="h-screen w-screen overflow-hidden">
       {ready && (
         <div
-          className={cn('flex flex-col', 'size-full text-small', 'bg-content1')}
+          className={cn('flex flex-col', 'text-small size-full', 'bg-content1')}
         >
           <CommentList />
 

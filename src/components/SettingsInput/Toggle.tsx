@@ -1,7 +1,7 @@
 import type { StorageItems, SettingsKey } from '@/types/storage'
 import type { SettingsInputBaseProps } from '.'
 
-import { Switch } from '@nextui-org/react'
+import { Switch } from '@heroui/react'
 
 import { useSettings } from '@/hooks/useSettings'
 
@@ -13,7 +13,7 @@ export type Key = {
 
 export type Props<K extends Key = Key> = SettingsInputBaseProps<K, 'toggle', {}>
 
-export const Input: React.FC<Props> = (props) => {
+export function Input(props: Props) {
   const [value, setValue] = useSettings(props.settingsKey)
 
   return (

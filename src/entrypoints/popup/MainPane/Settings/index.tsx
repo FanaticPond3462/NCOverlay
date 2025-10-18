@@ -1,6 +1,5 @@
-import type { AccordionItemProps } from '@nextui-org/react'
+import type { AccordionItemProps } from '@heroui/react'
 
-import { memo } from 'react'
 import {
   Accordion,
   AccordionItem,
@@ -9,7 +8,7 @@ import {
   Code,
   Image,
   cn,
-} from '@nextui-org/react'
+} from '@heroui/react'
 import {
   InfoIcon,
   DatabaseIcon,
@@ -37,10 +36,10 @@ import { StorageSizes } from './StorageSizes'
 import { ImportExport } from './ImportExport'
 
 const { name, version } = webext.runtime.getManifest()
-const iconUrl = webext.runtime.getURL('/icon-128.png')
+const iconUrl = webext.runtime.getURL('/icons/128.png')
 
 const accordionItemClassNames: AccordionItemProps['classNames'] = {
-  indicator: cn('-rotate-90 data-[open=true]:rotate-90'),
+  indicator: cn('-rotate-90 data-open=true:rotate-90'),
 }
 
 /**
@@ -55,7 +54,7 @@ const accordionItemInfo = (
   >
     <div className="flex flex-col gap-1 py-2">
       <div className="flex flex-row items-center justify-between">
-        <div className="flex flex-row items-center gap-2 text-medium">
+        <div className="text-medium flex flex-row items-center gap-2">
           <Image
             className="select-none"
             radius="none"
@@ -68,7 +67,8 @@ const accordionItemInfo = (
           <span className="font-bold">{name}</span>
 
           <Link
-            className="text-[length:inherit] text-foreground-500 dark:text-foreground-600"
+            className="text-foreground-500 dark:text-foreground-600 text-[length:inherit]"
+            underline="hover"
             href={`${GITHUB_URL}/releases/tag/v${version}`}
             isExternal
           >
@@ -83,7 +83,7 @@ const accordionItemInfo = (
             href="https://docs.google.com/forms/d/e/1FAIpQLSfVL8ub7t1qMGLI7BH0ypdV7Ctib6Sns-_VbKhiaRMGLloczw/viewform"
           /> */}
           <FormsButton />
-          <IconLink icon={SiGithub} href={GITHUB_URL} />
+          <IconLink Icon={SiGithub} href={GITHUB_URL} />
         </div>
       </div>
     </div>
@@ -94,7 +94,7 @@ const accordionItemInfo = (
  * 各設定
  */
 const accordionItemSettings = SETTINGS_INIT_DATA.map(
-  ({ id, title, items, icon: Icon }) => (
+  ({ id, title, items, Icon }) => (
     <AccordionItem
       key={id}
       classNames={accordionItemClassNames}
@@ -202,6 +202,7 @@ const accordionItemOthers = (
             <Link
               size="sm"
               color="primary"
+              underline="hover"
               showAnchorIcon
               href={url}
               isExternal
@@ -219,7 +220,7 @@ const accordionItemOthers = (
   </AccordionItem>
 )
 
-export const Settings: React.FC = memo(() => {
+export function Settings() {
   return (
     <Accordion
       className="p-2"
@@ -227,14 +228,14 @@ export const Settings: React.FC = memo(() => {
         base: cn(
           'overflow-hidden',
           'data-[open=true]:overflow-visible',
-          'border-1 border-foreground-200 !p-0 !shadow-none',
+          'border-foreground-200 border-1 !p-0 !shadow-none',
           '[&>*]:px-3'
         ),
         heading: cn(
           'sticky top-0 z-20',
           'gap-0',
-          'mb-[-1px] rounded-t-medium',
-          'border-b-1 border-foreground-200',
+          'rounded-t-medium mb-[-1px]',
+          'border-foreground-200 border-b-1',
           'bg-content1'
         ),
         trigger: 'gap-2',
@@ -251,4 +252,4 @@ export const Settings: React.FC = memo(() => {
       {accordionItemOthers}
     </Accordion>
   )
-})
+}

@@ -1,8 +1,7 @@
-import type { Program as EPGv2Program } from '@midra/nco-api/types/tver/v1/callEPGv2'
+import type { Program as EPGv2Program } from '@midra/nco-utils/types/api/tver/callEPGv2'
 import type { StateSlotDetailJikkyo } from '@/ncoverlay/state'
 import type { EPGProgram, EPGContent, EPGData } from '.'
 
-import { useMemo } from 'react'
 import {
   Divider,
   Popover,
@@ -10,10 +9,10 @@ import {
   PopoverContent,
   cn,
   tv,
-} from '@nextui-org/react'
+} from '@heroui/react'
 import { darken, saturate, toHex } from 'color2k'
-import { normalize } from '@midra/nco-parser/normalize'
-import { tverToJikkyoChId } from '@midra/nco-api/utils/tverToJikkyoChId'
+import { normalize } from '@midra/nco-utils/parse/libs/normalize'
+import { tverToJikkyoChId } from '@midra/nco-utils/api/utils/tverToJikkyoChId'
 
 import { zeroPadding } from '@/utils/zeroPadding'
 import { readableColor } from '@/utils/color'
@@ -28,7 +27,7 @@ const programIcon = tv({
     'relative -top-[0.5px]',
     'inline-flex items-center justify-center',
     'mr-0.5 size-[calc(1em+3px)]',
-    'select-none rounded-sm',
+    'rounded-xs select-none',
     'text-[calc(1em-1px)] font-normal',
     'text-white dark:text-black',
   ],
@@ -45,7 +44,7 @@ export type ProgramIconsProps = {
   icon: Partial<EPGv2Program['icon']>
 }
 
-export const ProgramIcons: React.FC<ProgramIconsProps> = ({ icon }) => {
+export function ProgramIcons({ icon }: ProgramIconsProps) {
   return (
     <>
       {icon.revival && (
@@ -74,29 +73,26 @@ export type ProgramContentProps = {
   bgColor: [light: string, dark: string]
 }
 
-export const ProgramContent: React.FC<ProgramContentProps> = ({
-  program,
-  bgColor,
-}) => {
-  const fgColor = useMemo(() => {
-    return bgColor.map((color) => readableColor(toHex(color))) as typeof bgColor
-  }, [bgColor])
-
-  const startMinutes = useMemo(() => {
-    return zeroPadding(new Date(program.startAt * 1000).getMinutes(), 2)
-  }, [program.startAt])
+export function ProgramContent({ program, bgColor }: ProgramContentProps) {
+  const fgColor = bgColor.map((color) =>
+    readableColor(toHex(color))
+  ) as typeof bgColor
+  const startMinutes = zeroPadding(
+    new Date(program.startAt * 1000).getMinutes(),
+    2
+  )
 
   return (
     <div
       className={cn(
         'size-full',
-        'border-b-1 border-divider',
+        'border-divider border-b-1',
         'overflow-hidden',
         'cursor-pointer'
       )}
     >
       <div
-        className={cn('flex flex-col gap-1', 'break-all text-mini')}
+        className={cn('flex flex-col gap-1', 'text-mini break-all')}
         title={program.description || program.title}
       >
         <span className="flex items-start gap-1">
@@ -106,7 +102,7 @@ export const ProgramContent: React.FC<ProgramContentProps> = ({
               className={cn(
                 'text-center',
                 'w-6 py-1',
-                'border-b-1 border-r-1 border-divider',
+                'border-divider border-r-1 border-b-1',
                 'dark:hidden'
               )}
               style={{
@@ -121,7 +117,7 @@ export const ProgramContent: React.FC<ProgramContentProps> = ({
               className={cn(
                 'text-center',
                 'w-6 py-1',
-                'border-b-1 border-r-1 border-divider',
+                'border-divider border-r-1 border-b-1',
                 'hidden dark:inline'
               )}
               style={{
@@ -134,7 +130,7 @@ export const ProgramContent: React.FC<ProgramContentProps> = ({
           </span>
 
           {/* タイトル */}
-          <span className="pr-1 pt-1 font-semibold">
+          <span className="pt-1 pr-1 font-semibold">
             <ProgramIcons icon={program.icon} />
 
             <span>{program.title}</span>
@@ -142,7 +138,7 @@ export const ProgramContent: React.FC<ProgramContentProps> = ({
         </span>
 
         {/* 概要 */}
-        <span className="px-1 text-foreground-500 dark:text-foreground-600">
+        <span className="text-foreground-500 dark:text-foreground-600 px-1">
           {program.description}
         </span>
       </div>
@@ -155,15 +151,10 @@ export type ProgramPopoverProps = {
   program: EPGProgram
 }
 
-export const ProgramPopover: React.FC<ProgramPopoverProps> = ({
-  tverChId,
-  program,
-}) => {
+export function ProgramPopover({ tverChId, program }: ProgramPopoverProps) {
   const stateSlotDetails = useNcoState('slotDetails')
 
-  const ids = useMemo(() => {
-    return stateSlotDetails?.map((v) => v.id)
-  }, [stateSlotDetails])
+  const ids = stateSlotDetails?.map((v) => v.id)
 
   const { title, description, startAt, endAt, icon } = program
 
@@ -241,12 +232,12 @@ export type ProgramCellProps = {
   program: EPGProgram
 }
 
-export const ProgramCell: React.FC<ProgramCellProps> = ({
+export function ProgramCell({
   date,
   genre,
   tverChId,
   program,
-}) => {
+}: ProgramCellProps) {
   const { startAt, endAt } = program
 
   const height = ((endAt - startAt) / 3600) * ROW_HEIGHT
@@ -261,7 +252,7 @@ export const ProgramCell: React.FC<ProgramCellProps> = ({
     <Popover
       classNames={{
         backdrop: 'bg-transparent',
-        content: 'border-1 border-foreground-100',
+        content: 'border-foreground-100 border-1',
       }}
       backdrop="opaque"
       placement="right-start"
@@ -269,7 +260,7 @@ export const ProgramCell: React.FC<ProgramCellProps> = ({
       <PopoverTrigger
         className={cn(
           'bg-content1 hover:bg-content2/90 aria-expanded:bg-content2/90',
-          '!duration-150 transition-background',
+          'transition-background !duration-150',
           'aria-expanded:scale-100',
           'aria-expanded:opacity-100',
           program.isDisabled && 'pointer-events-none opacity-50'
@@ -294,12 +285,12 @@ export type ProgramsProps = {
   data: EPGData
 }
 
-export const Programs: React.FC<ProgramsProps> = ({ data }) => {
+export function Programs({ data }: ProgramsProps) {
   const { date, contents, genre } = data
 
   return (
     <div
-      className="flex shrink-0 flex-row overflow-hidden bg-content3"
+      className="bg-content3 flex shrink-0 flex-row overflow-hidden"
       style={{ maxHeight: ROW_HEIGHT * 24 }}
     >
       {contents.map((content, idx) => (
@@ -309,7 +300,7 @@ export const Programs: React.FC<ProgramsProps> = ({ data }) => {
             'relative',
             'flex flex-col',
             'shrink-0',
-            'border-r-1 border-divider'
+            'border-divider border-r-1'
           )}
           style={{ width: COLUMN_WIDTH }}
         >

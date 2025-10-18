@@ -1,12 +1,12 @@
 import type { VodKey } from '@/types/constants'
 
-import { defineContentScript } from 'wxt/sandbox'
+import { defineContentScript } from '#imports'
 
 import { MATCHES } from '@/constants/matches'
 
 import { logger } from '@/utils/logger'
 import { checkVodEnable } from '@/utils/extension/checkVodEnable'
-import { ncoApiProxy } from '@/proxy/nco-api/extension'
+import { ncoApiProxy } from '@/proxy/nco-utils/api/extension'
 
 import { NCOPatcher } from '@/ncoverlay/patcher'
 
@@ -20,10 +20,10 @@ export default defineContentScript({
   main: () => void main(),
 })
 
-const main = async () => {
+async function main() {
   if (!(await checkVodEnable(vod))) return
 
-  logger.log(`vod-${vod}.js`)
+  logger.log('vod', vod)
 
   const patcher = new NCOPatcher({
     vod,
@@ -41,7 +41,7 @@ const main = async () => {
         episodeCode,
       })
 
-      logger.log('unext.title:', titleStage)
+      logger.log('unext.title', titleStage)
 
       if (!titleStage || !titleStage.episode) {
         return null
@@ -55,11 +55,16 @@ const main = async () => {
 
       const duration = titleStage.episode.duration
 
-      logger.log('workTitle:', workTitle)
-      logger.log('episodeTitle:', episodeTitle)
-      logger.log('duration:', duration)
+      logger.log('workTitle', workTitle)
+      logger.log('episodeTitle', episodeTitle)
+      logger.log('duration', duration)
 
-      return workTitle ? { workTitle, episodeTitle, duration } : null
+      return workTitle
+        ? {
+            input: `${workTitle} ${episodeTitle}`,
+            duration,
+          }
+        : null
     },
     appendCanvas: (video, canvas) => {
       video.insertAdjacentElement('afterend', canvas)
@@ -73,9 +78,11 @@ const main = async () => {
   const obs = new MutationObserver(() => {
     obs.disconnect()
 
-    if (patcher.nco && !document.body.contains(patcher.nco.renderer.video)) {
-      patcher.dispose()
-    } else if (!patcher.nco) {
+    if (patcher.nco) {
+      if (!patcher.nco.renderer.video.checkVisibility()) {
+        patcher.dispose()
+      }
+    } else {
       if (location.pathname.startsWith('/play/')) {
         const video = document.body.querySelector<HTMLVideoElement>(
           ':is(#videoTagWrapper, div[data-ucn="fullscreenContextWrapper"]) video'

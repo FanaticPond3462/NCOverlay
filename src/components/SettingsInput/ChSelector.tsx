@@ -2,10 +2,10 @@ import type {
   JikkyoDtvChannelId,
   JikkyoBsCsChannelId,
   JikkyoChannelId,
-} from '@midra/nco-api/types/constants'
+} from '@midra/nco-utils/types/api/constants'
 import type { SettingsInputBaseProps } from '.'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState } from 'react'
 import {
   Button,
   Tabs,
@@ -13,14 +13,14 @@ import {
   CheckboxGroup,
   Checkbox,
   useDisclosure,
-} from '@nextui-org/react'
+} from '@heroui/react'
 import {
   PencilIcon,
   ChevronRightIcon,
   RotateCcwIcon,
   SaveIcon,
 } from 'lucide-react'
-import { JIKKYO_CHANNELS } from '@midra/nco-api/constants'
+import { JIKKYO_CHANNELS } from '@midra/nco-utils/api/constants'
 
 import { JIKKYO_CHANNEL_GROUPS } from '@/constants/channels'
 
@@ -51,13 +51,13 @@ type ChSelectorProps = {
     | ((ids: JikkyoBsCsChannelId[]) => void)
 }
 
-const ChSelector: React.FC<ChSelectorProps> = ({ type, chIds, setChIds }) => {
+function ChSelector({ type, chIds, setChIds }: ChSelectorProps) {
   const CHANNEL = JIKKYO_CHANNEL_GROUPS[type]
 
   return (
     <CheckboxGroup
       classNames={{
-        label: 'hidden text-small text-foreground',
+        label: 'text-small text-foreground hidden',
         wrapper: 'gap-1.5 p-1.5',
       }}
       size="sm"
@@ -76,14 +76,14 @@ const ChSelector: React.FC<ChSelectorProps> = ({ type, chIds, setChIds }) => {
               'bg-default-100 hover:bg-default-200',
               'data-[selected=true]:bg-primary/15 dark:data-[selected=true]:bg-primary/20',
               'rounded-medium',
-              'border-1 border-divider hover:border-default-400',
+              'border-divider hover:border-default-400 border-1',
               'data-[selected=true]:border-primary',
               'transition-colors motion-reduce:transition-none',
               'cursor-pointer',
             ],
             wrapper: [
               'rounded-full',
-              'before:rounded-full before:border-1 before:!bg-default-50',
+              'before:!bg-default-50 before:rounded-full before:border-1',
               'after:rounded-full',
             ],
             label: 'flex w-full flex-col',
@@ -94,27 +94,27 @@ const ChSelector: React.FC<ChSelectorProps> = ({ type, chIds, setChIds }) => {
             {id}
           </span>
 
-          <span className="line-clamp-1 text-small">{JIKKYO_CHANNELS[id]}</span>
+          <span className="text-small line-clamp-1">{JIKKYO_CHANNELS[id]}</span>
         </Checkbox>
       ))}
     </CheckboxGroup>
   )
 }
 
-export const Input: React.FC<Props> = (props) => {
+export function Input(props: Props) {
   const [value, setValue] = useSettings(props.settingsKey)
 
   const [dtvChIds, setDtvChIds] = useState<JikkyoDtvChannelId[]>([])
   const [stvChIds, setStvChIds] = useState<JikkyoBsCsChannelId[]>([])
 
-  const onReset = useCallback(() => {
+  function onReset() {
     setDtvChIds(JIKKYO_CHANNEL_GROUPS.DTV.IDS)
     setStvChIds(JIKKYO_CHANNEL_GROUPS.STV.IDS)
-  }, [])
+  }
 
-  const onSave = useCallback(() => {
+  function onSave() {
     setValue([...dtvChIds, ...stvChIds])
-  }, [dtvChIds, stvChIds])
+  }
 
   const { isOpen, onOpen, onOpenChange } = useDisclosure()
 
@@ -179,10 +179,10 @@ export const Input: React.FC<Props> = (props) => {
       >
         <Tabs
           classNames={{
-            base: 'border-b-1 border-foreground-200 bg-content1',
+            base: 'border-foreground-200 bg-content1 border-b-1',
             tabList: 'p-0',
             tab: 'h-10 p-0',
-            panel: 'overflow-auto bg-content1 p-0',
+            panel: 'bg-content1 overflow-x-hidden overflow-y-auto p-0',
           }}
           variant="underlined"
           color="primary"

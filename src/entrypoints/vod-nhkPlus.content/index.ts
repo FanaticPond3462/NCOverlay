@@ -1,14 +1,14 @@
 import type { VodKey } from '@/types/constants'
-import type { JikkyoChannelId } from '@midra/nco-api/types/constants'
+import type { JikkyoChannelId } from '@midra/nco-utils/types/api/constants'
 
-import { defineContentScript } from 'wxt/sandbox'
+import { defineContentScript } from '#imports'
 
 import { MATCHES } from '@/constants/matches'
 
 import { logger } from '@/utils/logger'
 import { checkVodEnable } from '@/utils/extension/checkVodEnable'
 import { getJikkyoKakologs } from '@/utils/api/getJikkyoKakologs'
-import { ncoApiProxy } from '@/proxy/nco-api/extension'
+import { ncoApiProxy } from '@/proxy/nco-utils/api/extension'
 
 import { NCOPatcher } from '@/ncoverlay/patcher'
 
@@ -22,10 +22,10 @@ export default defineContentScript({
   main: () => void main(),
 })
 
-const main = async () => {
+async function main() {
   if (!(await checkVodEnable(vod))) return
 
-  logger.log(`vod-${vod}.js`)
+  logger.log('vod', vod)
 
   let streamId: string | null = null
   let jkChId: JikkyoChannelId | null = null
@@ -48,7 +48,7 @@ const main = async () => {
 
       const stream = await ncoApiProxy.nhkPlus.streams(streamId)
 
-      logger.log('nhkPlus.streams:', stream)
+      logger.log('nhkPlus.streams', stream)
 
       if (!stream) {
         return null
@@ -59,15 +59,15 @@ const main = async () => {
       starttime = new Date(program.start_time).getTime() / 1000
       endtime = new Date(program.end_time).getTime() / 1000
 
-      const rawText = program.title
+      const input = program.title
       const duration = endtime - starttime
 
-      logger.log('rawText:', rawText)
-      logger.log('duration:', duration)
+      logger.log('input', input)
+      logger.log('duration', duration)
 
-      return { rawText, duration, disableExtract: true }
+      return { input, duration, disableExtract: true }
     },
-    autoLoad: async (nco, input, { jikkyo, jikkyoChannelIds }) => {
+    autoLoad: async (nco, { input, duration, jikkyo, jikkyoChannelIds }) => {
       if (
         !jkChId ||
         !starttime ||
@@ -88,8 +88,8 @@ const main = async () => {
         info: {
           id: streamId,
           source: 'nhkPlus',
-          title: input.rawText,
-          duration: input.duration,
+          title: typeof input === 'string' ? input : input.input,
+          duration: duration,
           date: [starttime * 1000, endtime * 1000],
           count: {
             comment: 0,
@@ -125,8 +125,8 @@ const main = async () => {
         await nco.state.remove('slotDetails', { id })
       }
 
-      logger.log('slots:', await nco.state.get('slots'))
-      logger.log('slotDetails:', await nco.state.get('slotDetails'))
+      logger.log('slots', await nco.state.get('slots'))
+      logger.log('slotDetails', await nco.state.get('slotDetails'))
     },
     appendCanvas: (video, canvas) => {
       video.insertAdjacentElement('afterend', canvas)
@@ -140,14 +140,16 @@ const main = async () => {
   const obs = new MutationObserver(() => {
     obs.disconnect()
 
-    if (patcher.nco && !document.body.contains(patcher.nco.renderer.video)) {
-      patcher.dispose()
+    if (patcher.nco) {
+      if (!patcher.nco.renderer.video.checkVisibility()) {
+        patcher.dispose()
 
-      streamId = null
-      jkChId = null
-      starttime = null
-      endtime = null
-    } else if (!patcher.nco) {
+        streamId = null
+        jkChId = null
+        starttime = null
+        endtime = null
+      }
+    } else {
       const video = document.body.querySelector<HTMLVideoElement>(
         'video.hls-player_video[src]'
       )

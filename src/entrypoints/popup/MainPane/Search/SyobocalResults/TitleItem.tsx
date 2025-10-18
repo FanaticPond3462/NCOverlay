@@ -1,13 +1,12 @@
 import type {
   SyoboCalTitleMedium,
   SyoboCalTitleSearch,
-} from '@midra/nco-api/types/syobocal/json'
+} from '@midra/nco-utils/types/api/syobocal/json'
 
-import { useMemo } from 'react'
-import { cn } from '@nextui-org/react'
+import { cn } from '@heroui/react'
 import { useOverflowDetector } from 'react-detectable-overflow'
 import { CalendarDaysIcon, ShapesIcon, ChevronRightIcon } from 'lucide-react'
-import { SYOBOCAL_CATEGORIES } from '@midra/nco-api/constants'
+import { SYOBOCAL_CATEGORIES } from '@midra/nco-utils/api/constants'
 
 export type ScTitleItem = SyoboCalTitleMedium | SyoboCalTitleSearch
 
@@ -16,30 +15,24 @@ export type TitleItemInnerProps = {
   isHeader?: boolean
 }
 
-export const TitleItemInner: React.FC<TitleItemInnerProps> = ({
-  item,
-  isHeader,
-}) => {
+export function TitleItemInner({ item, isHeader }: TitleItemInnerProps) {
   const { ref, overflow } = useOverflowDetector()
 
-  const period = useMemo(() => {
-    const start = `${item.FirstYear}年${item.FirstMonth}月`
-
-    const end = [
+  const period = [
+    `${item.FirstYear}年${item.FirstMonth}月`,
+    [
       item.FirstEndYear &&
         item.FirstEndYear !== item.FirstYear &&
         `${item.FirstEndYear}年`,
       item.FirstEndMonth && `${item.FirstEndMonth}月`,
     ]
       .filter(Boolean)
-      .join('')
+      .join(''),
+  ]
+    .filter(Boolean)
+    .join('〜')
 
-    return [start, end].filter(Boolean).join('〜')
-  }, [item.FirstYear, item.FirstMonth, item.FirstEndYear, item.FirstEndMonth])
-
-  const category = useMemo(() => {
-    return SYOBOCAL_CATEGORIES[item.Cat]?.replace('/再放送', '')
-  }, [item.Cat])
+  const category = SYOBOCAL_CATEGORIES[item.Cat]?.replace('/再放送', '')
 
   return (
     <div className="flex flex-col items-start gap-1">
@@ -91,7 +84,7 @@ export type TitleItemProps = {
   onClick: () => void
 }
 
-export const TitleItem: React.FC<TitleItemProps> = ({ item, onClick }) => {
+export function TitleItem({ item, onClick }: TitleItemProps) {
   if (!item.FirstYear || !item.FirstMonth) {
     return null
   }
@@ -102,7 +95,7 @@ export const TitleItem: React.FC<TitleItemProps> = ({ item, onClick }) => {
         'flex flex-row items-center justify-between',
         'p-2',
         'rounded-medium',
-        'border-1 border-foreground-200 hover:border-default-400',
+        'border-foreground-200 hover:border-default-400 border-1',
         'bg-content1 hover:bg-content2/90',
         'text-foreground',
         'cursor-pointer',
@@ -112,7 +105,7 @@ export const TitleItem: React.FC<TitleItemProps> = ({ item, onClick }) => {
     >
       <TitleItemInner item={item} />
 
-      <div className="shrink-0 px-1 text-foreground-500 dark:text-foreground-600">
+      <div className="text-foreground-500 dark:text-foreground-600 shrink-0 px-1">
         <ChevronRightIcon className="size-4" />
       </div>
     </div>

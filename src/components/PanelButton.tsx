@@ -1,13 +1,13 @@
-import type { ButtonProps } from '@nextui-org/react'
+import type { ButtonProps } from '@heroui/react'
 
-import { Button, cn } from '@nextui-org/react'
+import { Button, cn } from '@heroui/react'
 import { Tooltip } from './Tooltip'
 
 export type PanelButtonProps = ButtonProps & {
   label?: string
 }
 
-export const PanelButton: React.FC<PanelButtonProps> = (props) => {
+export function PanelButton(props: PanelButtonProps) {
   return (
     <Tooltip content={props.label}>
       <Button

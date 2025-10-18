@@ -1,29 +1,28 @@
 import type { V1Thread } from '@xpadev-net/niconicomments'
-import type { JikkyoChannelId } from '@midra/nco-api/types/constants'
-import type {
-  BuildSearchQueryInput,
-  BuildSearchQueryOptions,
-} from '@midra/nco-api/search/lib/buildSearchQuery'
+import type { JikkyoChannelId } from '@midra/nco-utils/types/api/constants'
+import type { BuildSearchQueryArgs } from '@midra/nco-utils/search/lib/buildSearchQuery'
 import type {
   NCOState,
   StateSlot,
   StateSlotDetail,
+  StateSlotDetailDefault,
   StateSlotDetailUpdate,
 } from './state'
 
-import { REGEXP_DANIME_CHAPTER } from '@midra/nco-api/constants'
-import { jikkyoToSyobocalChId } from '@midra/nco-api/utils/jikkyoToSyobocalChId'
-import { syobocalToJikkyoChId } from '@midra/nco-api/utils/syobocalToJikkyoChId'
+import { parse } from '@midra/nco-utils/parse'
+import { REGEXP_DANIME_CHAPTER } from '@midra/nco-utils/search/constants'
+import { jikkyoToSyobocalChId } from '@midra/nco-utils/api/utils/jikkyoToSyobocalChId'
+import { syobocalToJikkyoChId } from '@midra/nco-utils/api/utils/syobocalToJikkyoChId'
 
 import { logger } from '@/utils/logger'
 import { getNiconicoComments } from '@/utils/api/getNiconicoComments'
 import { getJikkyoKakologs } from '@/utils/api/getJikkyoKakologs'
 import { searchDataToSlotDetail } from '@/utils/api/searchDataToSlotDetail'
 import { programToSlotDetail } from '@/utils/api/programToSlotDetail'
-import { ncoApiProxy } from '@/proxy/nco-api/extension'
+import { ncoSearchProxy } from '@/proxy/nco-utils/search/extension'
 
-export type NCOSearcherAutoLoadOptions = Omit<
-  BuildSearchQueryOptions,
+export type NCOSearcherAutoLoadArgs = Omit<
+  BuildSearchQueryArgs,
   'userAgent'
 > & {
   jikkyo?: boolean
@@ -40,12 +39,11 @@ export class NCOSearcher {
     this.#state = state
   }
 
-  async autoLoad(
-    input: BuildSearchQueryInput,
-    options: NCOSearcherAutoLoadOptions
-  ) {
+  async autoLoad(args: NCOSearcherAutoLoadArgs) {
+    args.input = parse(args.input)
+
     const isAutoLoaded = true
-    const { jikkyo, jikkyoChannelIds, ...searchOptions } = options
+    const { input: parsed, duration, targets, jikkyo, jikkyoChannelIds } = args
 
     const channelIds = jikkyoChannelIds
       ?.map(jikkyoToSyobocalChId)
@@ -57,17 +55,17 @@ export class NCOSearcher {
 
     const [searchResults, searchSyobocalResults] = await Promise.all([
       // ニコニコ動画 検索
-      ncoApiProxy.search({
-        input,
-        options: {
-          ...searchOptions,
-          userAgent: EXT_USER_AGENT,
-        },
+      ncoSearchProxy.niconico({
+        input: parsed,
+        duration,
+        targets,
+        userAgent: EXT_USER_AGENT,
       }),
 
       // ニコニコ実況 過去ログ 検索
       jikkyo
-        ? ncoApiProxy.searchSyobocal(input, {
+        ? ncoSearchProxy.syobocal({
+            input: parsed,
             channelIds,
             userAgent: EXT_USER_AGENT,
           })
@@ -82,22 +80,20 @@ export class NCOSearcher {
         (val) => new Date(val.EdTime).getTime() < currentTime
       )
 
-    logger.log('searchResults:', searchResults)
-    logger.log('searchSyobocalResults:', searchSyobocalResults)
+    logger.log('searchResults', searchResults)
+    logger.log('searchSyobocalResults', searchSyobocalResults)
 
     // ロード中のデータ
     const loadingSlotDetails: StateSlotDetail[] = []
 
     // ニコニコ動画
     if (searchResults) {
-      ;(
-        [
-          ['official', searchResults.official],
-          ['danime', searchResults.danime],
-          ['chapter', [searchResults.chapter[0]]],
-          ['szbh', searchResults.szbh],
-        ] as const
-      ).forEach(([type, results]) => {
+      Object.entries({
+        official: searchResults.official,
+        danime: searchResults.danime,
+        chapter: [searchResults.chapter[0]],
+        szbh: searchResults.szbh,
+      }).forEach(([type, results]) => {
         results.forEach((result) => {
           if (!result || loadedIds.includes(result.contentId)) return
 
@@ -105,7 +101,7 @@ export class NCOSearcher {
 
           // オフセット調節
           if (type === 'szbh') {
-            const diff = result.lengthSeconds - input.duration
+            const diff = result.lengthSeconds - duration
 
             if (50 <= diff) {
               offsetMs = diff * -1000
@@ -114,7 +110,7 @@ export class NCOSearcher {
 
           loadingSlotDetails.push(
             searchDataToSlotDetail(result, {
-              type,
+              type: type as StateSlotDetailDefault['type'],
               status: 'loading',
               offsetMs,
               isAutoLoaded,
@@ -128,7 +124,7 @@ export class NCOSearcher {
     if (syobocalPrograms) {
       const slotTitle = [
         searchSyobocalResults.title.Title,
-        `#${input.episodeNumber}`,
+        `#${syobocalPrograms[0].Count}`,
         searchSyobocalResults.subtitle,
       ]
         .filter(Boolean)
@@ -209,11 +205,11 @@ export class NCOSearcher {
         : null,
     ])
 
-    logger.log('commentsOfficial:', commentsOfficial)
-    logger.log('commentsDAnime:', commentsDAnime)
-    logger.log('commentsChapter:', commentsChapter)
-    logger.log('commentsSzbh:', commentsSzbh)
-    logger.log('commentsJikkyo:', commentsJikkyo)
+    logger.log('commentsOfficial', commentsOfficial)
+    logger.log('commentsDAnime', commentsDAnime)
+    logger.log('commentsChapter', commentsChapter)
+    logger.log('commentsSzbh', commentsSzbh)
+    logger.log('commentsJikkyo', commentsJikkyo)
 
     const loadedSlots: StateSlot[] = []
     const updateSlotDetails: StateSlotDetailUpdate[] = []
@@ -353,7 +349,7 @@ export class NCOSearcher {
       const slot = loadedSlots.find((v) => v.id === id)
       const detail = updateSlotDetails.find((v) => v.id === id)
 
-      if (slot && detail?.info?.count?.comment) {
+      if (slot && detail) {
         slots.push(slot)
 
         await this.#state.update('slotDetails', ['id'], detail)
@@ -364,7 +360,7 @@ export class NCOSearcher {
 
     await this.#state.add('slots', ...slots)
 
-    logger.log('slots:', await this.#state.get('slots'))
-    logger.log('slotDetails:', await this.#state.get('slotDetails'))
+    logger.log('slots', await this.#state.get('slots'))
+    logger.log('slotDetails', await this.#state.get('slotDetails'))
   }
 }
