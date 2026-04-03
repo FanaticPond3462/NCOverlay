@@ -1,10 +1,9 @@
 import type {
-  SlotsToClasses,
   SelectProps as HeroUISelectProps,
   SelectSlots,
+  SlotsToClasses,
 } from '@heroui/react'
 
-import { useMemo } from 'react'
 import {
   Select as HeroUISelect,
   SelectItem as HeroUISelectItem,
@@ -12,7 +11,7 @@ import {
   tv,
 } from '@heroui/react'
 
-export type SelectProps = Omit<HeroUISelectProps, 'size'> & {
+export interface SelectProps extends Omit<HeroUISelectProps, 'size'> {
   size?: HeroUISelectProps['size'] | 'mini'
 }
 
@@ -54,7 +53,7 @@ const select = tv({
       mini: {
         label: 'hidden',
         trigger: 'h-6 min-h-6 px-1.5',
-        innerWrapper: '!pt-0 [&:has(>svg)]:gap-1.5',
+        innerWrapper: 'pt-0! [&:has(>svg)]:gap-1.5',
         selectorIcon: 'end-1.5',
         value: 'text-mini',
         listbox: 'p-0',
@@ -67,18 +66,12 @@ const select = tv({
   },
 })
 
-export const Select: React.FC<SelectProps> = (props) => {
-  const classNames = useMemo(() => {
-    const slots = select({ size: props.size })
-    const slotKeys = Object.keys(slots) as SelectSlots[]
-
-    return Object.fromEntries(
-      slotKeys.map((key) => [
-        key,
-        slots[key]({ class: props.classNames?.[key] }),
-      ])
-    ) as HeroUISelectProps['classNames']
-  }, [props.size])
+export function Select(props: SelectProps) {
+  const slots = select({ size: props.size })
+  const slotKeys = Object.keys(slots) as (keyof typeof slots)[]
+  const classNames = Object.fromEntries(
+    slotKeys.map((key) => [key, slots[key]({ class: props.classNames?.[key] })])
+  ) as HeroUISelectProps['classNames']
 
   return (
     <HeroUISelect

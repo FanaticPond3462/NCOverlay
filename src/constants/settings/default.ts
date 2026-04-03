@@ -1,7 +1,8 @@
-import type { JikkyoChannelId } from '@midra/nco-api/types/constants'
-import type { SettingsKey, SettingItems } from '@/types/storage'
+import type { JikkyoChannelId } from '@midra/nco-utils/types/api/constants'
+import type { SettingItems, SettingsKey } from '@/types/storage'
 
-import { JIKKYO_CHANNELS } from '@midra/nco-api/constants'
+import { JIKKYO_CHANNELS } from '@midra/nco-utils/api/constants'
+
 import { VOD_KEYS } from '../vods'
 
 /** 設定のデフォルト値 */
@@ -18,12 +19,21 @@ export const SETTINGS_DEFAULT: SettingItems = {
   'settings:comment:fps': 60,
   'settings:comment:opacity': 100,
   'settings:comment:scale': 100,
+  'settings:comment:speed': 1,
+  'settings:comment:customize': {},
   'settings:comment:amount': 1,
-  'settings:comment:autoLoads': ['official', 'danime', 'chapter'],
   'settings:comment:useNiconicoCredentials': true,
-  'settings:comment:jikkyoChannelIds': Object.keys(
+  'settings:comment:hideAssistedComments': false,
+  'settings:comment:adjustJikkyoOffset': false,
+
+  // 自動検索
+  'settings:autoSearch:targets': ['official', 'danime', 'chapter'],
+  'settings:autoSearch:jikkyoChannelIds': Object.keys(
     JIKKYO_CHANNELS
   ) as JikkyoChannelId[],
+  'settings:autoSearch:jikkyoIgnoreRerun': false,
+  'settings:autoSearch:jikkyoOnlyAdjustable': true,
+  'settings:autoSearch:manual': false,
 
   // NG設定
   'settings:ng:words': [],
@@ -32,8 +42,10 @@ export const SETTINGS_DEFAULT: SettingItems = {
   'settings:ng:largeComments': false,
   'settings:ng:fixedComments': false,
   'settings:ng:coloredComments': false,
+  'settings:ng:sharingLevel': 'none',
 
   // キーボード
+  'settings:kbd:toggleDisplayComment': '',
   'settings:kbd:increaseGlobalOffset': '',
   'settings:kbd:decreaseGlobalOffset': '',
   'settings:kbd:resetGlobalOffset': '',
@@ -53,6 +65,10 @@ export const SETTINGS_DEFAULT: SettingItems = {
   'settings:search:dateRange': [null, null],
   'settings:search:genre': 'アニメ',
   'settings:search:lengthRange': [null, null],
+
+  // コメントリスト (設定には非表示)
+  'settings:commentList:smoothScrolling': false,
+  'settings:commentList:showPositionControl': true,
 }
 
 export const SETTINGS_DEFAULT_KEYS = Object.keys(

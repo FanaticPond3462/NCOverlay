@@ -1,23 +1,23 @@
 import type { StateKey } from '@/types/storage'
 
-import { defineBackground } from 'wxt/sandbox'
-import { ncoApi } from '@midra/nco-api'
+import { defineBackground } from '#imports'
+import { ncoApi } from '@midra/nco-utils/api'
+import { ncoSearch } from '@midra/nco-utils/search'
 
 import { GITHUB_URL } from '@/constants'
-
 import { logger } from '@/utils/logger'
 import { webext } from '@/utils/webext'
-import { storage } from '@/utils/storage/extension'
-import { settings } from '@/utils/settings/extension'
-import { setBadge } from '@/utils/extension/setBadge'
 import { getFormsUrl } from '@/utils/extension/getFormsUrl'
+import { setBadge } from '@/utils/extension/setBadge'
+import { onProxyMessage } from '@/utils/proxy-service/messaging/extension'
 import { registerProxy } from '@/utils/proxy-service/register'
-import { onMessage } from '@/utils/proxy-service/messaging/extension'
-import { sendNcoMessage } from '@/ncoverlay/messaging'
+import { settings } from '@/utils/settings/extension'
+import { storage } from '@/utils/storage/extension'
+import { sendMessageToContent } from '@/messaging/to-content'
 
-import migration from './migration'
-import registerUtilsMessage from './registerUtilsMessage'
 import clearTemporaryData from './clearTemporaryData'
+import migration from './migration'
+import registerMessaging from './registerMessaging'
 import requestPermissions from './requestPermissions'
 
 export default defineBackground({
@@ -25,17 +25,18 @@ export default defineBackground({
   main: () => void main(),
 })
 
-const main = async () => {
+async function main() {
   logger.log('background.js')
 
-  registerProxy('ncoApi', ncoApi, onMessage)
-  registerUtilsMessage()
+  registerProxy('ncoApi', ncoApi, onProxyMessage)
+  registerProxy('ncoSearch', ncoSearch, onProxyMessage)
+  registerMessaging()
+
+  // 権限をリクエスト
+  requestPermissions()
 
   // インストール・アップデート時
   webext.runtime.onInstalled.addListener(async ({ reason }) => {
-    // 権限をリクエスト
-    requestPermissions()
-
     switch (reason) {
       case 'install':
         if (import.meta.env.PROD) {
@@ -68,16 +69,17 @@ const main = async () => {
   })
 
   webext.runtime.onConnect.addListener((port) => {
+    const tabId = port.sender?.tab?.id
+
     switch (port.name) {
       // NCOverlayインスタンス作成時
       case 'instance':
-        const tabId = port.sender?.tab?.id
-        let ncoId: string | undefined
+        let ncoId: number | undefined
 
         let intervalId: NodeJS.Timeout
         let timeoutId: NodeJS.Timeout
 
-        const dispose = () => {
+        function dispose() {
           logger.log('dispose()')
 
           // バッジリセット
@@ -112,7 +114,7 @@ const main = async () => {
               case 'pong':
                 clearTimeout(timeoutId)
 
-                ncoId = data
+                ncoId = Number(data)
                 timeoutId = setTimeout(dispose, 15000)
 
                 break
@@ -130,12 +132,10 @@ const main = async () => {
 
       // サイドパネル
       case 'sidepanel':
-        port.onDisconnect.addListener(async () => {
-          const tab = await webext.getCurrentActiveTab()
-
+        port.onDisconnect.addListener(() => {
           webext.sidePanel.setOptions({
             enabled: false,
-            tabId: tab?.id,
+            tabId,
           })
         })
 
@@ -147,7 +147,7 @@ const main = async () => {
   webext.tabs.onUpdated.addListener(async (tabId) => {
     if (tabId === webext.tabs.TAB_ID_NONE) return
 
-    if (!(await sendNcoMessage('getId', null, tabId))) {
+    if (!(await sendMessageToContent('getNcoId', null, tabId))) {
       webext.sidePanel.setOptions({
         enabled: false,
         path: webext.sidePanel.path,
@@ -179,5 +179,14 @@ const main = async () => {
   // サイドパネル
   webext.sidePanel.setOptions({ enabled: false })
 
-  logger.log('settings:', await settings.get())
+  // ポップアップをウィンドウで開く (テスト用)
+  // webext.action.setPopup({ popup: '' })
+  // webext.action.onClicked.addListener((tab) => {
+  //   webext.windows.create({
+  //     type: 'popup',
+  //     url: webext.action.getPopupPath(tab?.id),
+  //   })
+  // })
+
+  logger.log('settings', await settings.get())
 }

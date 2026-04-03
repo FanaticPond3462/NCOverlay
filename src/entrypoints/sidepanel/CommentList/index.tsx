@@ -1,19 +1,21 @@
-import type { VirtuosoProps, VirtuosoHandle } from 'react-virtuoso'
-import type { V1ThreadCommentWithType } from '@/ncoverlay/state'
+import type { VirtuosoHandle, VirtuosoProps } from 'react-virtuoso'
+import type { NcoV1Comment } from '@/ncoverlay/state'
 
-import { memo, useMemo, useEffect, useState, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Virtuoso } from 'react-virtuoso'
 
-import { useNcoState, useNcoTime } from '@/hooks/useNco'
+import { ncoId, ncoState, useNcoState } from '@/hooks/useNco'
+import { useSettings } from '@/hooks/useSettings'
+import { onMessageInBackground } from '@/messaging/to-background'
 import { filterDisplayThreads } from '@/ncoverlay/state'
 
 import { Header } from './Header'
 import { Item } from './Item'
 
-const components: VirtuosoProps<V1ThreadCommentWithType, any>['components'] = {
+const components: VirtuosoProps<NcoV1Comment, any>['components'] = {
   EmptyPlaceholder: () => (
     <div className="flex size-full items-center justify-center">
-      <span className="text-small text-foreground-500">
+      <span className="text-foreground-500 text-small">
         コメントはありません
       </span>
     </div>
@@ -30,31 +32,28 @@ const components: VirtuosoProps<V1ThreadCommentWithType, any>['components'] = {
   },
 }
 
-export const CommentList: React.FC = memo(() => {
+export function CommentList() {
+  const virtuoso = useRef<VirtuosoHandle>(null)
+
   const [isHover, setIsHover] = useState(false)
-  const [comments, setComments] = useState<V1ThreadCommentWithType[]>([])
+  const [comments, setComments] = useState<NcoV1Comment[]>([])
 
   const stateOffset = useNcoState('offset')
   const stateSlots = useNcoState('slots')
   const stateSlotDetails = useNcoState('slotDetails')
-  const time = useNcoTime()
 
-  const offsetMs = useMemo(() => {
-    return (stateOffset ?? 0) * 1000
-  }, [stateOffset])
+  const [smoothScrolling] = useSettings('settings:commentList:smoothScrolling')
 
-  const virtuoso = useRef<VirtuosoHandle>(null)
+  const offsetMs = (stateOffset ?? 0) * 1000
+  const behavior = smoothScrolling ? 'smooth' : 'auto'
 
   useEffect(() => {
-    filterDisplayThreads(stateSlots, stateSlotDetails).then((threads) => {
-      const comments: V1ThreadCommentWithType[] | undefined = threads
-        ?.flatMap((thread) => {
-          return thread.comments.map((comment) => ({
-            ...comment,
-            type: thread.type,
-          }))
-        })
-        .sort((cmtA, cmtB) => cmtA.vposMs - cmtB.vposMs)
+    if (!ncoState) return
+
+    filterDisplayThreads(ncoState).then((threads) => {
+      const comments: NcoV1Comment[] | undefined = threads
+        ?.flatMap((thread) => thread.comments)
+        .sort((a, b) => a.vposMs - b.vposMs)
 
       setComments(comments ?? [])
     })
@@ -63,16 +62,21 @@ export const CommentList: React.FC = memo(() => {
   useEffect(() => {
     if (isHover) return
 
-    const currentTime = time - offsetMs
-    const index = comments.findLastIndex((cmt) => cmt.vposMs <= currentTime)
+    return onMessageInBackground('timeupdate', ({ data }) => {
+      if (data.id !== ncoId) return
 
-    if (index !== -1) {
-      virtuoso.current?.scrollToIndex({
-        index,
-        align: 'end',
-      })
-    }
-  }, [time])
+      const currentTime = data.time - offsetMs
+      const index = comments.findLastIndex((cmt) => cmt.vposMs <= currentTime)
+
+      if (index !== -1) {
+        virtuoso.current?.scrollToIndex({
+          index,
+          align: 'end',
+          behavior,
+        })
+      }
+    })
+  }, [virtuoso.current, isHover, behavior])
 
   return (
     <Virtuoso
@@ -86,4 +90,4 @@ export const CommentList: React.FC = memo(() => {
       onMouseLeave={() => setIsHover(false)}
     />
   )
-})
+}

@@ -1,17 +1,20 @@
 import type { VodKey } from '@/types/constants'
 
-import { defineContentScript } from 'wxt/sandbox'
-import { normalizeAll } from '@midra/nco-parser/normalize'
+import { defineContentScript } from '#imports'
+import { parse } from '@midra/nco-utils/parse'
+import { normalizeAll } from '@midra/nco-utils/parse/libs/normalize'
 
 import { MATCHES } from '@/constants/matches'
-
 import { logger } from '@/utils/logger'
 import { checkVodEnable } from '@/utils/extension/checkVodEnable'
-import { ncoApiProxy } from '@/proxy/nco-api/extension'
-
+import { ncoApiProxy } from '@/proxy/nco-utils/api/extension'
 import { NCOPatcher } from '@/ncoverlay/patcher'
 
-import './style.scss'
+import './style.css'
+
+const EP_PATH_REGEXP = /^\/video\/episode\/.+$/
+const SLOT_PATH_REGEXP = /^\/channels\/[^\/]+\/slots\/.+$/
+const EP_TITLE_LAST_REGEXP = /^最終(?:回|話)(?=\s)/
 
 const vod: VodKey = 'abema'
 
@@ -21,26 +24,26 @@ export default defineContentScript({
   main: () => void main(),
 })
 
-const main = async () => {
+async function main() {
   if (!(await checkVodEnable(vod))) return
 
-  logger.log(`vod-${vod}.js`)
+  logger.log('vod', vod)
 
-  const getProgramId = async () => {
+  async function getProgramId() {
     let programId: string | undefined
 
     const { pathname } = location
 
-    if (/^\/video\/episode\/.+$/.test(pathname)) {
+    if (EP_PATH_REGEXP.test(pathname)) {
       programId = pathname.split('/').at(-1)
-    } else if (/^\/channels\/[^\/]+\/slots\/.+$/.test(pathname)) {
+    } else if (SLOT_PATH_REGEXP.test(pathname)) {
       const id = pathname.split('/').at(-1)
       const token = localStorage.getItem('abm_token')
 
       if (id && token) {
-        const slot = await ncoApiProxy.abema.v1.media.slots(id, token)
+        const slot = await ncoApiProxy.abema.slots(id, token)
 
-        logger.log('abema.v1.media.slots:', slot)
+        logger.log('abema.slots', slot)
 
         programId = slot?.displayProgramId
       }
@@ -49,8 +52,7 @@ const main = async () => {
     return programId ?? null
   }
 
-  const patcher = new NCOPatcher({
-    vod,
+  const patcher = new NCOPatcher(vod, {
     getInfo: async () => {
       const programId = await getProgramId()
       const token = localStorage.getItem('abm_token')
@@ -59,12 +61,9 @@ const main = async () => {
         return null
       }
 
-      const program = await ncoApiProxy.abema.v1.video.programs(
-        programId,
-        token
-      )
+      const program = await ncoApiProxy.abema.programs(programId, token)
 
-      logger.log('abema.v1.video.programs:', program)
+      logger.log('abema.programs', program)
 
       if (program?.genre.id !== 'animation') {
         return null
@@ -81,26 +80,35 @@ const main = async () => {
         if (normalizedSeasonName.includes(normalizedSeriesTitle)) {
           workTitle = program.season.name
         } else {
-          workTitle = `${seriesTitle} ${program.season.name}`
+          const { season } = parse(`${seriesTitle} #0`)
+
+          if (!season) {
+            workTitle = `${seriesTitle} ${program.season.name}`
+          }
         }
       }
 
-      let episodeTitle: string | undefined
+      let episodeTitle: string | null = null
 
       if (workTitle !== program.episode.title) {
         episodeTitle = program.episode.title.replace(
-          /^最終(?:回|話)(?=\s)/,
+          EP_TITLE_LAST_REGEXP,
           `第${program.episode.number}話`
         )
       }
 
       const duration = program.info.duration
 
-      logger.log('workTitle:', workTitle)
-      logger.log('episodeTitle:', episodeTitle)
-      logger.log('duration:', duration)
+      logger.log('workTitle', workTitle)
+      logger.log('episodeTitle', episodeTitle)
+      logger.log('duration', duration)
 
-      return workTitle ? { workTitle, episodeTitle, duration } : null
+      return workTitle
+        ? {
+            input: `${workTitle} ${episodeTitle ?? ''}`,
+            duration,
+          }
+        : null
     },
     appendCanvas: (video, canvas) => {
       video
@@ -116,15 +124,14 @@ const main = async () => {
   const obs = new MutationObserver(() => {
     obs.disconnect()
 
-    if (patcher.nco && !document.body.contains(patcher.nco.renderer.video)) {
-      patcher.dispose()
-    } else if (!patcher.nco) {
+    if (patcher.nco) {
+      if (!patcher.nco.renderer.video.checkVisibility()) {
+        patcher.dispose()
+      }
+    } else {
       const { pathname } = location
 
-      if (
-        /^\/video\/episode\/.+$/.test(pathname) ||
-        /^\/channels\/[^\/]+\/slots\/.+$/.test(pathname)
-      ) {
+      if (EP_PATH_REGEXP.test(pathname) || SLOT_PATH_REGEXP.test(pathname)) {
         const video = document.body.querySelector<HTMLVideoElement>(
           '.com-a-Video__video > video[preload][src]'
         )

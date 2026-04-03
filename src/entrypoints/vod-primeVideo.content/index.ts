@@ -1,22 +1,21 @@
 import type { VodKey } from '@/types/constants'
 
-import { defineContentScript } from 'wxt/sandbox'
-import { normalize, normalizeAll } from '@midra/nco-parser/normalize'
-import { season as extractSeason } from '@midra/nco-parser/extract/lib/season'
-import { episode as extractEpisode } from '@midra/nco-parser/extract/lib/episode'
+import { defineContentScript } from '#imports'
+import { parse } from '@midra/nco-utils/parse'
+import { normalize } from '@midra/nco-utils/parse/libs/normalize'
 
 import { MATCHES } from '@/constants/matches'
-
 import { logger } from '@/utils/logger'
+import { sleep } from '@/utils/sleep'
 import { checkVodEnable } from '@/utils/extension/checkVodEnable'
-import { querySelectorAsync } from '@/utils/dom/querySelectorAsync'
-
+import { sendMessageToPage } from '@/messaging/to-page'
 import { NCOPatcher } from '@/ncoverlay/patcher'
-import { formatedToSeconds } from '@/utils/format'
 
-import './style.scss'
+import './style.css'
 
 const vod: VodKey = 'primeVideo'
+
+const SEASON_NUM_VAGUE_REGEXP = /(?<=[^\d]+)[2-9]$/
 
 export default defineContentScript({
   matches: MATCHES[vod],
@@ -24,145 +23,71 @@ export default defineContentScript({
   main: () => void main(),
 })
 
-const getDetail = (): { title: string } | null => {
-  const canonicalUrl = document.querySelector<HTMLLinkElement>(
-    'link[rel="canonical"]'
-  )?.href
-  const asin = canonicalUrl?.match(/(?<=\/dp\/)[0-9A-Z]+$/)?.[0] ?? ''
-  const titleId1 =
-    location.href?.match(/(?<=\/dp\/)[0-9A-Z]+(?=\/|$)/)?.[0] ?? ''
-  const titleId2 =
-    document.querySelector<HTMLInputElement>(
-      '.dv-dp-node-watchlist input[name="titleID"]'
-    )?.value ?? ''
-
-  const data = JSON.parse(
-    document.querySelector('#a-page > script[type="text/template"]')
-      ?.textContent || '{}'
-  )
-
-  try {
-    const { props } = data.props.body[0]
-
-    if ('atf' in props) {
-      const { headerDetail } = props.atf.state.detail
-      const detail =
-        headerDetail[asin] || headerDetail[titleId1] || headerDetail[titleId2]
-
-      if (detail?.title) {
-        return detail
-      }
-    }
-
-    if ('landingPage' in props) {
-      const detail = props.landingPage.containers
-        // @ts-ignore
-        .flatMap((v) => v.entities)
-        // @ts-ignore
-        .find((v) => {
-          return (
-            v.titleID === asin ||
-            v.titleID === titleId1 ||
-            v.titleID === titleId2
-          )
-        })
-
-      if (detail?.title) {
-        return detail
-      }
-    }
-  } catch {}
-
-  return null
-}
-
-const main = async () => {
+async function main() {
   if (!(await checkVodEnable(vod))) return
 
-  logger.log(`vod-${vod}.js`)
+  logger.log('vod', vod)
 
-  const patcher = new NCOPatcher({
-    vod,
-    getInfo: async (nco) => {
-      const player = nco.renderer.video.closest<HTMLElement>(
-        '.webPlayerSDKContainer'
-      )
+  const patcher = new NCOPatcher(vod, {
+    getInfo: async () => {
+      await sleep(2000)
 
-      if (!player) {
+      const item = await sendMessageToPage('getCurrentData', null)
+
+      if (!item) {
         return null
       }
 
-      const titleElem = player.querySelector<HTMLElement>(
-        '.atvwebplayersdk-title-text'
-      )
-      const subtitleElem = player.querySelector<HTMLElement>(
-        '.atvwebplayersdk-subtitle-text'
-      )
-      const timeindicatorElem = await querySelectorAsync(
-        player,
-        '.atvwebplayersdk-timeindicator-text:has(span)'
-      )
+      const { playbackUrls, catalog } = item
 
-      const detail = getDetail()
+      const title = catalog.seriesTitle || catalog.title
+      const subtitle = catalog.seriesTitle ? catalog.title : null
 
-      logger.log('detail:', detail)
-
-      const title = detail?.title || titleElem?.textContent
-      const season_episode = subtitleElem?.firstChild?.textContent
-      const subtitle = subtitleElem?.lastChild?.textContent
-
-      const seasonNum = Number(
-        season_episode?.match(/(?<=シーズン|Season)\d+/)?.[0] ?? -1
-      )
-      const episodeNum = Number(
-        season_episode?.match(/(?<=エピソード|Ep\.)\d+/)?.[0] ?? -1
-      )
+      const seasonNum = catalog.seasonNumber ?? -1
+      const episodeNum = catalog.episodeNumber ?? -1
 
       const seasonNumVague = Number(
-        normalize(title ?? '').match(/(?<=[^\d]+)[2-9]$/)?.[0] ?? -1
+        normalize(title).match(SEASON_NUM_VAGUE_REGEXP)?.[0] ?? -1
       )
 
-      const titleSeason = title && extractSeason(title)[0]
+      const parsedSubtitle = parse(`タイトル ${subtitle}`)
+      const titleSeason = parse(`${title} #0`).season
       const subtitleEpisode =
-        subtitle &&
-        extractEpisode(
-          normalizeAll(`タイトル ${subtitle}`, {
-            remove: {
-              space: false,
-            },
-          })
-        )[0]
+        subtitle && parsedSubtitle.isSingleEpisode
+          ? parsedSubtitle.episode
+          : null
 
       const seasonText =
         !titleSeason && 2 <= seasonNum && seasonNum !== seasonNumVague
           ? `${seasonNum}期`
           : null
-
-      const episodeText =
-        !subtitleEpisode && 0 <= episodeNum ? `${episodeNum}話` : null
-
       const workTitle =
         [title, seasonText].filter(Boolean).join(' ').trim() || null
 
+      const episodeText =
+        !subtitleEpisode && 0 <= episodeNum ? `${episodeNum}話` : null
       const episodeTitle =
         [episodeText, subtitle].filter(Boolean).join(' ').trim() || null
 
-      const duration =
-        timeindicatorElem?.textContent
-          ?.split('/')
-          .map(formatedToSeconds)
-          .reduce((a, b) => a + b) ?? 0
+      const duration = playbackUrls.fullTitleDurationMs / 1000
 
-      logger.log('workTitle:', workTitle)
-      logger.log('episodeTitle:', episodeTitle)
-      logger.log('duration:', duration)
+      logger.log('workTitle', workTitle)
+      logger.log('episodeTitle', episodeTitle)
+      logger.log('duration', duration)
 
-      return workTitle ? { workTitle, episodeTitle, duration } : null
+      return workTitle
+        ? {
+            input: `${workTitle} ${episodeTitle ?? ''}`,
+            duration,
+          }
+        : null
     },
     appendCanvas: (video, canvas) => {
       video
-        .closest('.webPlayerSDKContainer')
-        ?.querySelector('.webPlayerUIContainer')
+        .closest('div[id^=dv-web-player]')
+        ?.querySelector(
+          '.webPlayerUIContainer, .atvwebplayersdk-player-container'
+        )
         ?.insertAdjacentElement('afterbegin', canvas)
     },
   })
@@ -176,20 +101,16 @@ const main = async () => {
   const obs = new MutationObserver(() => {
     obs.disconnect()
 
-    if (
-      patcher.nco &&
-      !(
-        document.body.contains(patcher.nco.renderer.video) &&
-        patcher.nco.renderer.video.offsetParent
-      )
-    ) {
-      patcher.dispose()
-    } else if (!patcher.nco) {
+    if (patcher.nco) {
+      if (!patcher.nco.renderer.video.checkVisibility()) {
+        patcher.dispose()
+      }
+    } else {
       const video = document.body.querySelector<HTMLVideoElement>(
-        '.webPlayerSDKContainer video[src]'
+        'div[id^=dv-web-player].dv-player-fullscreen video[src]'
       )
 
-      if (video?.offsetParent) {
+      if (video) {
         patcher.setVideo(video)
       }
     }

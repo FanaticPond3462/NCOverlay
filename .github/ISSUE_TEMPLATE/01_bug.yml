@@ -29,6 +29,7 @@ body:
       label: ブラウザ
       options:
         - Chrome
+        - Edge
         - Firefox
 
   - type: checkboxes
@@ -43,11 +44,25 @@ body:
         - label: U-NEXT
         - label: FOD
         - label: Prime Video
+        - label: Netflix
         - label: Hulu
         - label: ニコニコ動画
-        - label: NHKプラス
+        - label: NHK ONE
+        - label: NHKオンデマンド
         - label: TVer
+        - label: YouTube
         - label: TELESA
+
+  - type: checkboxes
+    id: auto-search-targets
+    attributes:
+      label: 自動検索の検索対象
+      options:
+        - label: 公式
+        - label: dアニメ
+        - label: dアニメ(分割)
+        - label: コメント専用
+        - label: 実況
 
   - type: textarea
     id: video

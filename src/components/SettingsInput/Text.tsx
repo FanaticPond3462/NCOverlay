@@ -1,18 +1,25 @@
-import type { StorageItems, SettingsKey } from '@/types/storage'
+import type { SettingsKey, StorageItems } from '@/types/storage'
 import type { SettingsInputBaseProps } from '.'
 
+import { useEffect, useState } from 'react'
 import { Input as HeroUIInput } from '@heroui/react'
 
 import { useSettings } from '@/hooks/useSettings'
 
+import { initConditional } from '.'
+
 export type Key = {
-  [key in SettingsKey]: StorageItems[key] extends string ? key : never
+  [P in SettingsKey]: StorageItems[P] extends string ? P : never
 }[SettingsKey]
 
-export type Props<K extends Key = Key> = SettingsInputBaseProps<K, 'text', {}>
+export interface Props<K extends Key = Key>
+  extends SettingsInputBaseProps<K, 'text'> {}
 
-export const Input: React.FC<Props> = (props) => {
+export function Input(props: Omit<Props, 'inputType'>) {
   const [value, setValue] = useSettings(props.settingsKey)
+  const [isDisabled, setIsDisabled] = useState(false)
+
+  useEffect(() => initConditional(props.disable, setIsDisabled), [])
 
   return (
     <HeroUIInput
@@ -23,6 +30,7 @@ export const Input: React.FC<Props> = (props) => {
       labelPlacement="outside"
       label={props.label}
       description={props.description}
+      isDisabled={isDisabled}
       value={value}
       onValueChange={setValue}
     />
