@@ -10,9 +10,9 @@ export const VOD_KEYS = [
   'primeVideo',
   'netflix',
   'hulu',
-  // 'disneyPlus',
   'niconico',
-  'nhkPlus',
+  'nhkOne',
+  'nhkOndemand',
   'tver',
   'youtube',
 ] as const
@@ -28,11 +28,11 @@ export const VODS = {
   primeVideo: 'Prime Video',
   netflix: 'Netflix',
   hulu: 'Hulu',
-  // disneyPlus: 'Disney+',
   niconico: 'ニコニコ動画',
-  nhkPlus: 'NHKプラス',
+  nhkOne: 'NHK ONE',
+  nhkOndemand: 'NHKオンデマンド',
   tver: 'TVer',
   youtube: 'YouTube',
 } as const satisfies {
-  [key in VodKey]: string
+  [P in VodKey]: string
 }

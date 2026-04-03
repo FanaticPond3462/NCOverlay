@@ -3,7 +3,7 @@ import type { StateSlotDetail } from '@/ncoverlay/state'
 import { Button, cn } from '@heroui/react'
 import { Trash2Icon } from 'lucide-react'
 
-export type ButtonsOverlayProps = {
+export interface ButtonsOverlayProps {
   status: StateSlotDetail['status']
   onRemove: () => void
 }
@@ -14,16 +14,16 @@ export function ButtonsOverlay({ status, onRemove }: ButtonsOverlayProps) {
   return (
     <div
       className={cn(
-        'absolute inset-[1px] z-10',
-        'opacity-0 hover:opacity-100',
+        'absolute inset-px z-10',
+        'opacity-0! hover:opacity-100!',
         'transition-opacity'
       )}
     >
       {/* 削除 */}
       <Button
         className={cn(
-          'absolute top-[1px] right-[1px]',
-          '!size-6 min-h-0 min-w-0',
+          'absolute top-px right-px',
+          'size-6! min-h-0 min-w-0',
           'border-1 border-white/80'
         )}
         size="sm"

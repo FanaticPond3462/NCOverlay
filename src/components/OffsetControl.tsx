@@ -1,7 +1,7 @@
 import { Button, ButtonGroup, Divider, Input, cn } from '@heroui/react'
-import { RotateCcwIcon, CheckIcon } from 'lucide-react'
+import { CheckIcon, RotateCcwIcon } from 'lucide-react'
 
-export type OffsetControlProps = {
+export interface OffsetControlProps {
   value: number
   isValueChanged?: boolean
   compact?: boolean
@@ -33,8 +33,7 @@ export function OffsetControl({
               key={sec}
               className={cn(
                 'min-w-8 px-2',
-                'border-divider [&:not(:first-child)]:border-l-1',
-                'first:rounded-s-small! last:rounded-e-small!'
+                'border-divider not-first:border-l-1'
               )}
               onPress={() => onValueChange(value + sec)}
             >
@@ -45,7 +44,7 @@ export function OffsetControl({
 
         <Input
           classNames={{
-            inputWrapper: 'border-divider border-1 shadow-none',
+            inputWrapper: 'border-1 border-divider shadow-none',
             input: [
               'text-right',
               '[appearance:textfield]',
@@ -67,8 +66,7 @@ export function OffsetControl({
               key={sec}
               className={cn(
                 'min-w-8 px-2',
-                'border-divider [&:not(:first-child)]:border-l-1',
-                'first:rounded-s-small! last:rounded-e-small!'
+                'border-divider not-first:border-l-1'
               )}
               onPress={() => onValueChange(value + sec)}
             >

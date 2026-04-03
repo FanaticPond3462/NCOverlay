@@ -1,15 +1,18 @@
-import type { Runtime } from 'webextension-polyfill'
 import type {
   ExtractedResult,
-  ExtractedResultSingleEpisode,
   ExtractedResultMultipleEpisodes,
-} from '@midra/nco-utils/parse/libs/extract/index'
-import type { StateVod, StateInfo } from '@/ncoverlay/state'
+  ExtractedResultSingleEpisode,
+} from '@midra/nco-utils/parse/libs/extract'
+import type { StateInfo, StateVod } from '@/ncoverlay/state'
+import type { AutoSearchTarget } from '@/types/storage'
+import type { Browser } from '@/utils/webext'
 
-import { GOOGLE_FORMS_URL, GOOGLE_FORMS_IDS } from '@/constants'
+import { GOOGLE_FORMS_IDS, GOOGLE_FORMS_URL } from '@/constants'
+import { SOURCE_NAMES } from '@/constants/settings'
 import { VODS } from '@/constants/vods'
+import { get } from '@/utils/get'
 import { webext } from '@/utils/webext'
-import get from '@/utils/get-value'
+import { settings } from '@/utils/settings/extension'
 
 const CONTENTS = {
   bug: '不具合報告',
@@ -17,7 +20,7 @@ const CONTENTS = {
   other: 'その他',
 } as const
 
-const OS_NAMES: Partial<Record<Runtime.PlatformOs, string>> = {
+const OS_NAMES: Partial<Record<Browser.runtime.PlatformOs, string>> = {
   win: 'Windows',
   mac: 'macOS',
   linux: 'Linux',
@@ -25,20 +28,20 @@ const OS_NAMES: Partial<Record<Runtime.PlatformOs, string>> = {
   android: 'Android',
 }
 
-type Maybe<T> = T | null | undefined
-type NestedKeyOf<T extends Record<string, unknown>> = {
-  [K in keyof T & string]: T[K] extends Maybe<Record<string, unknown>>
-    ? T[K] extends Maybe<Record<string, unknown>>
-      ? `${K}.${NestedKeyOf<NonNullable<T[K]>>}`
-      : K
-    : K
+type NotObject = string | number | boolean | unknown[] | null | undefined
+type NestedKeyOf<T extends unknown> = {
+  [K in keyof T & string]: T[K] extends NotObject
+    ? K
+    : T[K] extends NotObject
+      ? K
+      : `${K}.${NestedKeyOf<NonNullable<T[K]>>}`
 }[keyof T & string]
 
 type ExtractedResultNestedKey =
   | NestedKeyOf<ExtractedResultSingleEpisode>
   | NestedKeyOf<ExtractedResultMultipleEpisodes>
 
-const EXTRACTED_RESULT_NESTED_KEYS: ExtractedResultNestedKey[] = [
+const EXTRACTED_RESULT_KEYS: ExtractedResultNestedKey[] = [
   'input',
 
   'title',
@@ -124,25 +127,30 @@ export async function getFormsUrl({
   info?: StateInfo | null
   url?: string | null
 } = {}) {
-  const { version } = webext.runtime.getManifest()
   const { os } = await webext.runtime.getPlatformInfo()
+  const { version } = webext.runtime.getManifest()
+  const autoSearchTargets = await settings.get('settings:autoSearch:targets')
 
   const osName = OS_NAMES[os]
 
   const formUrl = new URL(GOOGLE_FORMS_URL)
 
+  // バージョン
   formUrl.searchParams.set(`entry.${GOOGLE_FORMS_IDS.VERSION}`, version)
 
+  // OS
   if (osName) {
     formUrl.searchParams.set(`entry.${GOOGLE_FORMS_IDS.OS}`, osName)
   }
 
+  // ブラウザ
   if (webext.isChrome) {
     formUrl.searchParams.set(`entry.${GOOGLE_FORMS_IDS.BROWSER}`, 'Chrome')
   } else if (webext.isFirefox) {
     formUrl.searchParams.set(`entry.${GOOGLE_FORMS_IDS.BROWSER}`, 'Firefox')
   }
 
+  // 内容
   if (content) {
     formUrl.searchParams.set(
       `entry.${GOOGLE_FORMS_IDS.CONTENT}`,
@@ -150,10 +158,22 @@ export async function getFormsUrl({
     )
   }
 
+  // 動画配信サービス
   if (vod) {
     formUrl.searchParams.set(`entry.${GOOGLE_FORMS_IDS.VODS}`, VODS[vod])
   }
 
+  // 自動検索の検索対象
+  for (const key of Object.keys(SOURCE_NAMES) as AutoSearchTarget[]) {
+    if (autoSearchTargets.includes(key)) {
+      formUrl.searchParams.append(
+        `entry.${GOOGLE_FORMS_IDS.AUTO_SEARCH_TARGETS}`,
+        SOURCE_NAMES[key]
+      )
+    }
+  }
+
+  // 該当の動画
   const input = info?.input
 
   const inputText =
@@ -161,9 +181,7 @@ export async function getFormsUrl({
     [
       ...(typeof input === 'string'
         ? [`input: ${JSON.stringify(input)}`]
-        : EXTRACTED_RESULT_NESTED_KEYS.map((key) =>
-            formatKeyValue(input, key)
-          )),
+        : EXTRACTED_RESULT_KEYS.map((key) => formatKeyValue(input, key))),
       `duration: ${info.duration}`,
     ]
       .filter(Boolean)

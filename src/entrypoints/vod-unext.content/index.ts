@@ -3,14 +3,11 @@ import type { VodKey } from '@/types/constants'
 import { defineContentScript } from '#imports'
 
 import { MATCHES } from '@/constants/matches'
-
 import { logger } from '@/utils/logger'
 import { checkVodEnable } from '@/utils/extension/checkVodEnable'
-import { ncoApiProxy } from '@/proxy/nco-utils/api/extension'
-
 import { NCOPatcher } from '@/ncoverlay/patcher'
 
-import './style.scss'
+import './style.css'
 
 const vod: VodKey = 'unext'
 
@@ -25,35 +22,20 @@ async function main() {
 
   logger.log('vod', vod)
 
-  const patcher = new NCOPatcher({
-    vod,
-    getInfo: async () => {
-      const paths = location.pathname.split('/')
-      const id = paths.at(-2)
-      const episodeCode = paths.at(-1)
+  const patcher = new NCOPatcher(vod, {
+    getInfo: async (nco) => {
+      const titleContainer = document.body.querySelector(
+        'div[class*="_TitleContainer-"]'
+      )
+      const titleElem = titleContainer?.querySelector('h2[class*="_Title-"]')
+      const subTitleElem = titleContainer?.querySelector(
+        'h3[class*="_SubTitle-"]'
+      )
 
-      if (!id || !episodeCode) {
-        return null
-      }
+      const workTitle = titleElem?.textContent || null
+      const episodeTitle = subTitleElem?.textContent || null
 
-      const titleStage = await ncoApiProxy.unext.title({
-        id,
-        episodeCode,
-      })
-
-      logger.log('unext.title', titleStage)
-
-      if (!titleStage || !titleStage.episode) {
-        return null
-      }
-
-      const workTitle = titleStage.titleName
-      const episodeTitle = [
-        titleStage.episode.displayNo,
-        titleStage.episode.episodeName,
-      ].join(' ')
-
-      const duration = titleStage.episode.duration
+      const duration = nco.renderer.video.duration ?? 0
 
       logger.log('workTitle', workTitle)
       logger.log('episodeTitle', episodeTitle)
@@ -61,7 +43,7 @@ async function main() {
 
       return workTitle
         ? {
-            input: `${workTitle} ${episodeTitle}`,
+            input: `${workTitle} ${episodeTitle ?? ''}`,
             duration,
           }
         : null
@@ -85,7 +67,7 @@ async function main() {
     } else {
       if (location.pathname.startsWith('/play/')) {
         const video = document.body.querySelector<HTMLVideoElement>(
-          ':is(#videoTagWrapper, div[data-ucn="fullscreenContextWrapper"]) video'
+          ':is(#videoTagWrapper, div[data-ucn="fullscreenContextWrapper"]) video[src]'
         )
 
         if (video) {

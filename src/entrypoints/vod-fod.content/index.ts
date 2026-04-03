@@ -3,16 +3,15 @@ import type { VodKey } from '@/types/constants'
 import { defineContentScript } from '#imports'
 
 import { MATCHES } from '@/constants/matches'
-
 import { logger } from '@/utils/logger'
-import { checkVodEnable } from '@/utils/extension/checkVodEnable'
-
 import { getCookie } from '@/utils/dom/getCookie'
+import { checkVodEnable } from '@/utils/extension/checkVodEnable'
 import { ncoApiProxy } from '@/proxy/nco-utils/api/extension'
-
 import { NCOPatcher } from '@/ncoverlay/patcher'
 
-import './style.scss'
+import './style.css'
+
+const TRAILING_SLASH_REGEXP = /\/$/
 
 const vod: VodKey = 'fod'
 
@@ -27,10 +26,12 @@ async function main() {
 
   logger.log('vod', vod)
 
-  const patcher = new NCOPatcher({
-    vod,
+  const patcher = new NCOPatcher(vod, {
     getInfo: async (nco) => {
-      const id = location.pathname.replace(/\/$/, '').split('/').at(-1)
+      const id = location.pathname
+        .replace(TRAILING_SLASH_REGEXP, '')
+        .split('/')
+        .at(-1)
       const token = getCookie('CT')
 
       if (!id || !token) {

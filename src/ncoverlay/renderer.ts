@@ -1,13 +1,15 @@
-import type { BaseOptions, V1Thread } from '@xpadev-net/niconicomments'
+import type { V1Thread } from '@midra/nco-utils/types/api/niconico/v1/threads'
+import type { BaseOptions } from '@xpadev-net/niconicomments'
 import type { StorageItems } from '@/types/storage'
 
 import NiconiComments from '@xpadev-net/niconicomments'
 
 import { logger } from '@/utils/logger'
 import { getObjectFitRect } from '@/utils/dom/getObjectFitRect'
-import { sendUtilsMessage } from '@/utils/extension/messaging'
+import { sendMessageToBackground } from '@/messaging/to-background'
 
-type NiconiCommentsOptions = Partial<Omit<BaseOptions, 'mode' | 'format'>>
+interface NiconiCommentsOptions
+  extends Partial<Omit<BaseOptions, 'mode' | 'format'>> {}
 
 /**
  * NCOverlayの描画担当
@@ -123,8 +125,7 @@ export class NCORenderer {
         ...this.#options,
       })
 
-      this.updateTime()
-      this.render()
+      this.rerender()
     }
   }
 
@@ -134,6 +135,11 @@ export class NCORenderer {
       ((performance.now() - this.#startTimestamp) * this.#playbackRate) / 10
 
     this.#niconicomments?.drawCanvas(vpos)
+  }
+
+  rerender() {
+    this.updateTime()
+    this.render()
   }
 
   start() {
@@ -149,12 +155,12 @@ export class NCORenderer {
   }
 
   #startRequestAnimationFrame() {
-    this.#frameId = window.requestAnimationFrame(this.#animationFrameCallback)
+    this.#frameId = requestAnimationFrame(this.#animationFrameCallback)
   }
 
   #stopRequestAnimationFrame() {
     if (this.#frameId) {
-      window.cancelAnimationFrame(this.#frameId)
+      cancelAnimationFrame(this.#frameId)
 
       this.#frameId = 0
     }
@@ -190,7 +196,7 @@ export class NCORenderer {
         let data: number[] | undefined
 
         try {
-          data = await sendUtilsMessage('captureTab', {
+          data = await sendMessageToBackground('captureTab', {
             rect: getObjectFitRect(true, this.canvas, 1920, 1080),
             scale: window.devicePixelRatio,
             format,

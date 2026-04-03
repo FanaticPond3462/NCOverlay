@@ -1,10 +1,10 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 
 import { ncoState, useNcoState } from '@/hooks/useNco'
 
 import { OffsetControl } from '@/components/OffsetControl'
 
-export type GlobalOffsetControlProps = {
+export interface GlobalOffsetControlProps {
   compact?: boolean
 }
 

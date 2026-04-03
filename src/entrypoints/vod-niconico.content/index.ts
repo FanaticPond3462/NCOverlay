@@ -3,16 +3,14 @@ import type { VodKey } from '@/types/constants'
 import { defineContentScript } from '#imports'
 
 import { MATCHES } from '@/constants/matches'
-
 import { logger } from '@/utils/logger'
+import { getNiconicoComment } from '@/utils/api/niconico/getNiconicoComment'
+import { videoDataToSlotDetail } from '@/utils/api/niconico/videoDataToSlotDetail'
 import { checkVodEnable } from '@/utils/extension/checkVodEnable'
-import { getNiconicoComments } from '@/utils/api/getNiconicoComments'
-import { videoDataToSlotDetail } from '@/utils/api/videoDataToSlotDetail'
 import { ncoApiProxy } from '@/proxy/nco-utils/api/extension'
-
 import { NCOPatcher } from '@/ncoverlay/patcher'
 
-import './style.scss'
+import './style.css'
 
 const vod: VodKey = 'niconico'
 
@@ -29,8 +27,7 @@ async function main() {
 
   let onChangeRemoveListener: (() => void) | null = null
 
-  const patcher = new NCOPatcher({
-    vod,
+  const patcher = new NCOPatcher(vod, {
     getInfo: async (nco) => {
       const wrapper = nco.renderer.video.closest('div[data-name="inner"]')
 
@@ -66,10 +63,14 @@ async function main() {
         })
       )
 
-      const [comment] = await getNiconicoComments([videoData])
+      const comment = await getNiconicoComment(videoData)
 
       if (comment) {
-        const { data, threads, kawaiiCount } = comment
+        const {
+          videoData: { video },
+          threads,
+          kawaiiCount,
+        } = comment
 
         await nco.state.update('slotDetails', ['id'], {
           id,
@@ -83,8 +84,8 @@ async function main() {
 
         await nco.state.add('slots', { id, threads })
 
-        const input = data.video.title
-        const duration = data.video.duration
+        const input = video.title
+        const duration = video.duration
 
         logger.log('input', input)
         logger.log('duration', duration)
@@ -118,7 +119,7 @@ async function main() {
     } else {
       if (location.pathname.startsWith('/watch/')) {
         const video = document.body.querySelector<HTMLVideoElement>(
-          'div[data-name="content"] > video[data-name="video-content"]'
+          'div[data-name="content"] > video[data-name="video-content"][src]'
         )
 
         if (video) {

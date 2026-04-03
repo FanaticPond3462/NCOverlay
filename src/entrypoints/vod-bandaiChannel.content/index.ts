@@ -3,13 +3,11 @@ import type { VodKey } from '@/types/constants'
 import { defineContentScript } from '#imports'
 
 import { MATCHES } from '@/constants/matches'
-
 import { logger } from '@/utils/logger'
 import { checkVodEnable } from '@/utils/extension/checkVodEnable'
-
 import { NCOPatcher } from '@/ncoverlay/patcher'
 
-import './style.scss'
+import './style.css'
 
 const vod: VodKey = 'bandaiChannel'
 
@@ -30,8 +28,7 @@ async function main() {
 
   if (!video) return
 
-  const patcher = new NCOPatcher({
-    vod,
+  const patcher = new NCOPatcher(vod, {
     getInfo: async (nco) => {
       const seriesTitleElem =
         document.body.querySelector<HTMLElement>('#bch-series-title')
@@ -56,7 +53,7 @@ async function main() {
 
       return workTitle
         ? {
-            input: `${workTitle} ${episodeTitle}`,
+            input: `${workTitle} ${episodeTitle ?? ''}`,
             duration,
           }
         : null

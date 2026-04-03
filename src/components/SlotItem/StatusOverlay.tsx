@@ -2,7 +2,7 @@ import type { StateSlotDetail } from '@/ncoverlay/state'
 
 import { Spinner, cn } from '@heroui/react'
 
-export type StatusOverlayProps = {
+export interface StatusOverlayProps {
   status: StateSlotDetail['status']
 }
 
@@ -12,7 +12,7 @@ export function StatusOverlay({ status }: StatusOverlayProps) {
   return (
     <div
       className={cn(
-        'absolute inset-[1px] z-10',
+        'absolute inset-px z-10',
         'flex items-center justify-center',
         'bg-foreground/50 backdrop-blur-[1px]',
         'rounded-lg',

@@ -8,17 +8,17 @@ import type { SettingsInputBaseProps } from '.'
 import { useEffect, useState } from 'react'
 import {
   Button,
-  Switch,
   Input as HeroUIInput,
-  useDisclosure,
+  Switch,
   cn,
+  useDisclosure,
 } from '@heroui/react'
 import {
-  PencilIcon,
   ChevronRightIcon,
+  PencilIcon,
   PlusIcon,
-  XIcon,
   SaveIcon,
+  XIcon,
 } from 'lucide-react'
 
 import { useSettings } from '@/hooks/useSettings'
@@ -27,17 +27,16 @@ import { ItemButton } from '@/components/ItemButton'
 import { Modal } from '@/components/Modal'
 import { Tooltip } from '@/components/Tooltip'
 
+import { initConditional } from '.'
+
 type SettingsNgKey = Extract<SettingsKey, `settings:ng:${string}`>
 
 export type Key = {
-  [key in SettingsNgKey]: StorageItems[key] extends unknown[] ? key : never
+  [P in SettingsNgKey]: StorageItems[P] extends unknown[] ? P : never
 }[SettingsNgKey]
 
-export type Props<K extends Key = Key> = SettingsInputBaseProps<
-  K,
-  'ng-list',
-  {}
->
+export interface Props<K extends Key = Key>
+  extends SettingsInputBaseProps<K, 'ng-list'> {}
 
 function validateRegExp(pattern: string) {
   try {
@@ -61,7 +60,8 @@ function filterNgSettingsContents(contents: (NgSettingsContent | null)[]) {
   }) as NgSettingsContent[]
 }
 
-type CellProps = React.PropsWithChildren<React.HTMLAttributes<HTMLDivElement>>
+interface CellProps
+  extends React.PropsWithChildren<React.HTMLAttributes<HTMLDivElement>> {}
 
 function HeaderCell({ className, ...props }: CellProps) {
   return (
@@ -72,8 +72,8 @@ function HeaderCell({ className, ...props }: CellProps) {
         'shrink-0 py-1.5',
         'bg-content2 text-content2-foreground',
         'border-divider border-b-1',
-        'text-tiny font-semibold',
-        '[&:not(:first-child)]:border-l-1',
+        'font-semibold text-tiny',
+        'not-first:border-l-1',
         className
       )}
     />
@@ -89,7 +89,7 @@ function ItemCell({ className, ...props }: CellProps) {
         'shrink-0 p-1.5',
         'border-divider border-b-1',
         'text-small',
-        '[&:not(:first-child)]:border-l-1',
+        'not-first:border-l-1',
         className
       )}
     />
@@ -101,14 +101,14 @@ function Header() {
     <div className="sticky top-0 z-20 flex flex-row">
       <HeaderCell className="w-[calc(100%-7rem)]">テキスト</HeaderCell>
 
-      <HeaderCell className="w-[4rem]">正規表現</HeaderCell>
+      <HeaderCell className="w-16">正規表現</HeaderCell>
 
-      <HeaderCell className="w-[3rem]">削除</HeaderCell>
+      <HeaderCell className="w-12">削除</HeaderCell>
     </div>
   )
 }
 
-type ItemProps = {
+interface ItemProps {
   init: NgSettingsContent
   onValueChange: (value: NgSettingsContent | null) => void
 }
@@ -121,7 +121,10 @@ function Item({ init, onValueChange }: ItemProps) {
   useEffect(() => {
     setIsRegExpValidated(!isRegExp || !content || validateRegExp(content))
 
-    onValueChange({ content, isRegExp })
+    onValueChange({
+      content,
+      isRegExp: isRegExp || undefined,
+    })
   }, [content, isRegExp])
 
   return (
@@ -144,7 +147,7 @@ function Item({ init, onValueChange }: ItemProps) {
       </ItemCell>
 
       <ItemCell
-        className={cn('flex items-center justify-center', 'w-[4rem] p-0 py-1')}
+        className={cn('flex items-center justify-center', 'w-16 p-0 py-1')}
       >
         <Switch
           classNames={{
@@ -157,7 +160,7 @@ function Item({ init, onValueChange }: ItemProps) {
       </ItemCell>
 
       <ItemCell
-        className={cn('flex items-center justify-center', 'w-[3rem] p-0 py-1')}
+        className={cn('flex items-center justify-center', 'w-12 p-0 py-1')}
       >
         <Button
           className="text-foreground"
@@ -174,10 +177,10 @@ function Item({ init, onValueChange }: ItemProps) {
   )
 }
 
-export function Input(props: Props) {
+export function Input(props: Omit<Props, 'inputType'>) {
   const [value, setValue] = useSettings(props.settingsKey)
-
   const [tmpValue, setTmpValue] = useState<(NgSettingsContent | null)[]>([])
+  const [isDisabled, setIsDisabled] = useState(false)
 
   function onAdd() {
     setTmpValue((val) => [...val, { content: '' }])
@@ -188,6 +191,8 @@ export function Input(props: Props) {
   }
 
   const { isOpen, onOpen, onOpenChange } = useDisclosure()
+
+  useEffect(() => initConditional(props.disable, setIsDisabled), [])
 
   useEffect(() => {
     setTmpValue(isOpen ? value : [])
@@ -205,6 +210,7 @@ export function Input(props: Props) {
             text: '編集',
             onPress: onOpen,
           }}
+          isDisabled={isDisabled}
         />
       </div>
 
@@ -237,7 +243,7 @@ export function Input(props: Props) {
       >
         <Header />
 
-        <div className="bg-content1 flex flex-col">
+        <div className="flex flex-col bg-content1">
           {tmpValue.map((val, idx, ary) => {
             if (!val) return
 

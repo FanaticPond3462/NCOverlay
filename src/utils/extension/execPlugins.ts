@@ -1,16 +1,16 @@
 import type {
+  PluginId,
   PluginKey,
   PluginVodKey,
-  PluginId,
   Plugins,
 } from '@/types/constants'
 
 import { logger } from '@/utils/logger'
 import { settings } from '@/utils/settings/page'
 
-export async function execPlugins<VodKey extends PluginVodKey>(
-  vod: VodKey,
-  plugins: Plugins<VodKey>
+export async function execPlugins<K extends PluginVodKey>(
+  vod: K,
+  plugins: Plugins<K>
 ) {
   const enabledVods = await settings.get('settings:vods')
 
@@ -18,11 +18,11 @@ export async function execPlugins<VodKey extends PluginVodKey>(
 
   logger.log('plugin', vod)
 
-  const pluginIds = Object.keys(plugins) as PluginId<VodKey>[]
-  const disablePlugins = new Map<PluginId<VodKey>, () => void>()
+  const disablePlugins = new Map<PluginId<K>, () => void>()
 
   settings.watch('settings:plugins', (keys) => {
-    pluginIds.forEach((id) => {
+    for (const key in plugins) {
+      const id = key as PluginId<K>
       const pluginKey = `${vod}:${id}` as PluginKey
 
       // プラグイン ON
@@ -38,6 +38,6 @@ export async function execPlugins<VodKey extends PluginVodKey>(
         disablePlugins.get(id)!()
         disablePlugins.delete(id)
       }
-    })
+    }
   })
 }

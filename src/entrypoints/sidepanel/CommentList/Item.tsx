@@ -1,54 +1,55 @@
 import type { SlotsToClasses } from '@heroui/react'
-import type { StateSlotDetail, NcoV1ThreadComment } from '@/ncoverlay/state'
+import type { NcoV1Comment, StateSlotDetail } from '@/ncoverlay/state'
 
 import {
   Dropdown,
-  DropdownTrigger,
+  DropdownItem,
   DropdownMenu,
   DropdownSection,
-  DropdownItem,
+  DropdownTrigger,
   cn,
 } from '@heroui/react'
-import { CopyIcon, PlusIcon, ClockIcon } from 'lucide-react'
+import { addToast } from '@heroui/toast'
+import { ClockIcon, CopyIcon, PlusIcon } from 'lucide-react'
 import { useOverflowDetector } from 'react-detectable-overflow'
 
-import { NICONICO_COLOR_COMMANDS, COLOR_CODE_REGEXP } from '@/constants'
-
-import { formatDuration, formatDate } from '@/utils/format'
+import { COLOR_CODE_REGEXP, NICONICO_COLORS } from '@/constants'
 import { readableColor } from '@/utils/color'
+import { formatDate, formatDuration } from '@/utils/format'
 import { settings } from '@/utils/settings/extension'
-import { sendNcoMessage } from '@/ncoverlay/messaging'
-
 import { ncoState } from '@/hooks/useNco'
+import { sendMessageToContent } from '@/messaging/to-content'
 
-const COMMENT_WRAPPER_TYPE_CLASSES: {
-  [k in StateSlotDetail['type']]: string
-} = {
-  normal: cn('before:bg-transparent'),
-  official: cn('before:bg-[#ffe248] dark:before:bg-[#ffd700]'),
-  danime: cn('before:bg-danime-400 dark:before:bg-danime-500'),
-  chapter: cn('before:bg-danime-400 dark:before:bg-danime-500'),
-  szbh: cn('before:bg-gray-500 dark:before:bg-gray-600'),
-  jikkyo: cn('before:bg-jikkyo-600 dark:before:bg-jikkyo-700'),
-}
+type CnReturn = ReturnType<typeof cn>
 
-const COMMENT_CELL_COMMAND_CLASSES: Record<string, string> = {
+const COMMENT_WRAPPER_TYPE_CLASSES: Record<StateSlotDetail['type'], CnReturn> =
+  {
+    normal: cn('before:bg-transparent'),
+    official: cn('before:bg-[#ffe248] dark:before:bg-[#ffd700]'),
+    danime: cn('before:bg-danime-400 dark:before:bg-danime-500'),
+    chapter: cn('before:bg-danime-400 dark:before:bg-danime-500'),
+    szbh: cn('before:bg-gray-500 dark:before:bg-gray-600'),
+    jikkyo: cn('before:bg-jikkyo-600 dark:before:bg-jikkyo-700'),
+    nicolog: cn('before:bg-blue-500 dark:before:bg-blue-600'),
+    file: cn('before:bg-blue-500 dark:before:bg-blue-600'),
+  }
+
+const COMMENT_CELL_COMMAND_CLASSES: Record<string, CnReturn> = {
   // 位置: 上
   ue: cn('justify-center pt-0.5 pb-5'),
   // 位置: 下
   shita: cn('justify-center pt-5 pb-0.5'),
 }
 
-const COMMENT_COMMAND_CLASSES: Record<string, string> = {
+const COMMENT_COMMAND_CLASSES: Record<string, CnReturn> = {
   // サイズ: 大
-  'big': cn('text-[110%] font-bold'),
+  big: cn('font-bold text-[110%]'),
   // サイズ: 小
-  'small': cn('text-[75%]'),
+  small: cn('text-[75%]'),
   // 明朝体
-  'mincho': cn('font-serif'),
+  mincho: cn('font-serif'),
   // 半透明
-  '_live': cn('opacity-50'),
-  'nico:opacity:0.5': cn('opacity-50'),
+  _live: cn('opacity-50'),
 }
 
 const NICORU_COLORS: Record<number, string> = {
@@ -58,9 +59,8 @@ const NICORU_COLORS: Record<number, string> = {
   4: 'rgb(252 216 66 / 50%)',
 }
 
-type ItemCellProps = React.PropsWithChildren<
-  React.HTMLAttributes<HTMLDivElement>
->
+interface ItemCellProps
+  extends React.PropsWithChildren<React.HTMLAttributes<HTMLDivElement>> {}
 
 function ItemCell({ className, ...props }: ItemCellProps) {
   return (
@@ -77,7 +77,7 @@ function ItemCell({ className, ...props }: ItemCellProps) {
   )
 }
 
-type ItemCellWithMenuProps = {
+interface ItemCellWithMenuProps {
   classNames?: SlotsToClasses<'trigger' | 'wrapper' | 'cell'>
   style?: React.CSSProperties
   children: React.ReactNode
@@ -95,7 +95,7 @@ function ItemCellWithMenu({
       classNames={{
         backdrop: 'bg-transparent',
         base: 'max-w-[90vw]',
-        content: 'border-foreground-100 overflow-hidden border-1',
+        content: 'overflow-hidden border-1 border-foreground-100',
       }}
       backdrop="opaque"
     >
@@ -105,7 +105,7 @@ function ItemCellWithMenu({
           'shrink-0',
           'cursor-pointer',
           'hover:bg-default/20 aria-expanded:bg-default/20',
-          'dark:hover:bg-default/40 dark:aria-expanded:bg-default/40',
+          'dark:aria-expanded:bg-default/40 dark:hover:bg-default/40',
           'aria-expanded:scale-100',
           'aria-expanded:opacity-100',
           classNames?.trigger
@@ -124,47 +124,58 @@ function ItemCellWithMenu({
 }
 
 function getCmtClassAndColor(commands: string[]) {
-  const cmtCellCmdClass: string[] = []
-  const cmtCmdClass: string[] = []
-  let cmtBgColor: string | undefined
-  let cmtFgColor: string | undefined
+  const cmtCellCmdClass: CnReturn[] = []
+  const cmtCmdClass: CnReturn[] = []
+  const cmtStyle: React.CSSProperties = {}
 
-  commands?.forEach((command) => {
-    if (command === 'white') return
+  const hasCustomColor = commands.includes('nco:customize:color')
 
+  for (const command of commands) {
+    if (command === 'white') continue
+
+    // セル
     if (command in COMMENT_CELL_COMMAND_CLASSES) {
       cmtCellCmdClass.push(COMMENT_CELL_COMMAND_CLASSES[command])
-    } else if (command in COMMENT_COMMAND_CLASSES) {
+    }
+    // 文字
+    else if (command in COMMENT_COMMAND_CLASSES) {
       cmtCmdClass.push(COMMENT_COMMAND_CLASSES[command])
-    } else if (
-      command in NICONICO_COLOR_COMMANDS ||
-      COLOR_CODE_REGEXP.test(command)
+    }
+    // 不透明度
+    else if (command.startsWith('nico:opacity:')) {
+      const opacity = Number(command.split(':')[2])
+
+      if (Number.isFinite(opacity)) {
+        cmtStyle.opacity = opacity
+      }
+    }
+    // 色
+    else if (
+      !hasCustomColor &&
+      (command in NICONICO_COLORS || COLOR_CODE_REGEXP.test(command))
     ) {
-      cmtBgColor = NICONICO_COLOR_COMMANDS[command] ?? command
-      cmtFgColor = readableColor(cmtBgColor)
+      cmtStyle.backgroundColor = NICONICO_COLORS[command] ?? command
+      cmtStyle.color = readableColor(cmtStyle.backgroundColor)
 
       cmtCmdClass.push(
-        cn('border-foreground-300 m-[-1px] rounded-[5px] border-1 px-1')
+        cn('-m-px rounded-[5px] border-1 border-foreground-300 px-1')
       )
     }
-  })
+  }
 
-  return { cmtCellCmdClass, cmtCmdClass, cmtBgColor, cmtFgColor }
+  return { cmtCellCmdClass, cmtCmdClass, cmtStyle }
 }
 
-export type ItemProps = {
-  comment: NcoV1ThreadComment
+export interface ItemProps {
+  comment: NcoV1Comment
   offsetMs: number
 }
 
 export function Item({ comment, offsetMs }: ItemProps) {
   const { ref, overflow } = useOverflowDetector()
 
-  const { cmtCellCmdClass, cmtCmdClass, cmtBgColor, cmtFgColor } =
-    getCmtClassAndColor(comment.commands)
-
-  const displayCommands = comment.commands.filter(
-    (cmd) => !cmd.startsWith('nico:')
+  const { cmtCellCmdClass, cmtCmdClass, cmtStyle } = getCmtClassAndColor(
+    comment.commands
   )
 
   const formattedDuration = formatDuration((comment.vposMs + offsetMs) / 1000)
@@ -178,32 +189,94 @@ export function Item({ comment, offsetMs }: ItemProps) {
     (1 <= comment.nicoruCount && NICORU_COLORS[1]) ||
     undefined
 
-  // メニュー (コメント)
-  function copyComment() {
-    navigator.clipboard.writeText(comment.body)
+  async function copyComment() {
+    try {
+      await navigator.clipboard.writeText(comment.body)
+
+      addToast({
+        color: 'success',
+        title: 'コメントをコピーしました',
+      })
+    } catch {
+      addToast({
+        color: 'danger',
+        title: 'コメントのコピーに失敗しました',
+      })
+    }
   }
-  function copyId() {
-    navigator.clipboard.writeText(comment.userId)
+  async function copyId() {
+    try {
+      await navigator.clipboard.writeText(comment.userId)
+
+      addToast({
+        color: 'success',
+        title: 'ユーザーIDをコピーしました',
+      })
+    } catch {
+      addToast({
+        color: 'danger',
+        title: 'ユーザーIDのコピーに失敗しました',
+      })
+    }
   }
 
   async function addNgComment() {
-    settings.set('settings:ng:words', [
-      ...(await settings.get('settings:ng:words')),
-      { content: comment.body },
-    ])
+    try {
+      await settings.set('settings:ng:words', [
+        ...(await settings.get('settings:ng:words')),
+        { content: comment.body },
+      ])
+
+      addToast({
+        color: 'success',
+        title: 'NG設定(コメント)に追加しました',
+      })
+    } catch {
+      addToast({
+        color: 'danger',
+        title: 'NG設定(コメント)の追加に失敗しました',
+      })
+    }
   }
   async function addNgId() {
-    settings.set('settings:ng:ids', [
-      ...(await settings.get('settings:ng:ids')),
-      { content: comment.userId },
-    ])
+    try {
+      await settings.set('settings:ng:ids', [
+        ...(await settings.get('settings:ng:ids')),
+        { content: comment.userId },
+      ])
+
+      addToast({
+        color: 'success',
+        title: 'NG設定(ユーザーID)に追加しました',
+      })
+    } catch {
+      addToast({
+        color: 'danger',
+        title: 'NG設定(ユーザーID)の追加に失敗しました',
+      })
+    }
   }
 
   const commentMenu = (
     <DropdownMenu variant="flat">
+      <DropdownSection aria-label="コメント" showDivider>
+        <DropdownItem
+          key="comment"
+          classNames={{
+            base: [
+              'pointer-events-none',
+              '[&>span]:wrap-anywhere [&>span]:line-clamp-5 [&>span]:whitespace-pre-wrap [&>span]:break-all',
+            ],
+          }}
+        >
+          {comment.body}
+        </DropdownItem>
+      </DropdownSection>
+
       <DropdownSection aria-label="アクション" showDivider>
         <DropdownItem
           key="copy-comment"
+          description={comment.body}
           startContent={<CopyIcon className="size-4 shrink-0" />}
           onPress={copyComment}
         >
@@ -212,6 +285,7 @@ export function Item({ comment, offsetMs }: ItemProps) {
 
         <DropdownItem
           key="copy-user-id"
+          description={comment.userId}
           startContent={<CopyIcon className="size-4 shrink-0" />}
           onPress={copyId}
         >
@@ -241,12 +315,15 @@ export function Item({ comment, offsetMs }: ItemProps) {
 
   // メニュー (再生時間)
   async function adjustGlobalOffset() {
-    const currentTime = (await sendNcoMessage('getCurrentTime', null)) ?? 0
+    const currentTime =
+      (await sendMessageToContent('getCurrentTime', null)) ?? 0
 
-    ncoState?.set(
+    await ncoState?.set(
       'offset',
       Math.floor((comment.vposMs / 1000) * -1 + currentTime)
     )
+
+    sendMessageToContent('rerender', null)
   }
 
   const timeMenu = (
@@ -268,7 +345,10 @@ export function Item({ comment, offsetMs }: ItemProps) {
         classNames={{
           wrapper: [
             'relative',
-            'w-[calc(100%-5rem)]',
+            'side1:w-full',
+            'side2:w-[calc(100%-5rem)]',
+            'side3:w-[calc(100%-8rem)]',
+            'side4:w-[calc(100%-21rem)]',
             'before:absolute before:left-0',
             'before:block',
             'before:h-full before:w-1',
@@ -286,10 +366,7 @@ export function Item({ comment, offsetMs }: ItemProps) {
       >
         <span
           className={cn('line-clamp-2 break-all', cmtCmdClass)}
-          style={{
-            backgroundColor: cmtBgColor,
-            color: cmtFgColor,
-          }}
+          style={cmtStyle}
           title={overflow ? comment.body : undefined}
           ref={ref}
         >
@@ -300,7 +377,7 @@ export function Item({ comment, offsetMs }: ItemProps) {
       {/* 再生時間 */}
       <ItemCellWithMenu
         classNames={{
-          wrapper: 'w-[5rem] font-mono',
+          wrapper: 'w-20 font-mono',
           cell: 'justify-center',
         }}
         style={{ backgroundColor: nicoruColor }}
@@ -330,7 +407,7 @@ export function Item({ comment, offsetMs }: ItemProps) {
         className="w-full font-mono"
         style={{ backgroundColor: nicoruColor }}
       >
-        <span className="line-clamp-1">{displayCommands.join(' ')}</span>
+        <span className="line-clamp-1">{comment._raw.commands.join(' ')}</span>
       </ItemCell>
     </div>
   )

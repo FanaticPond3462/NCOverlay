@@ -1,20 +1,18 @@
-import type { VodKey } from '@/types/constants'
 import type {
-  Season,
   Episode,
+  Season,
 } from '@midra/nco-utils/types/api/netflix/metadata'
+import type { VodKey } from '@/types/constants'
 
 import { defineContentScript } from '#imports'
 
 import { MATCHES } from '@/constants/matches'
-
 import { logger } from '@/utils/logger'
 import { checkVodEnable } from '@/utils/extension/checkVodEnable'
 import { ncoApiProxy } from '@/proxy/nco-utils/api/extension'
-
 import { NCOPatcher } from '@/ncoverlay/patcher'
 
-import './style.scss'
+import './style.css'
 
 const vod: VodKey = 'netflix'
 
@@ -29,8 +27,7 @@ async function main() {
 
   logger.log('vod', vod)
 
-  const patcher = new NCOPatcher({
-    vod,
+  const patcher = new NCOPatcher(vod, {
     getInfo: async (nco) => {
       const id = location.pathname.split('/').at(-1)
 
@@ -88,7 +85,7 @@ async function main() {
 
       return workTitle
         ? {
-            input: `${workTitle} ${episodeTitle}`,
+            input: `${workTitle} ${episodeTitle ?? ''}`,
             duration,
           }
         : null

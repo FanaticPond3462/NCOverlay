@@ -1,11 +1,11 @@
 import type { StateSlotDetail } from '@/ncoverlay/state'
 
 import { Skeleton, cn } from '@heroui/react'
-import { PlayIcon, MessageSquareTextIcon, HeartIcon } from 'lucide-react'
+import { HeartIcon, MessageSquareTextIcon, PlayIcon } from 'lucide-react'
 
 import { useSettings } from '@/hooks/useSettings'
 
-export type CountsProps = {
+export interface CountsProps {
   status: StateSlotDetail['status']
   infoCount: StateSlotDetail['info']['count']
   isSearch?: boolean
@@ -46,8 +46,8 @@ export function Counts({ status, infoCount, isSearch }: CountsProps) {
 
         <Skeleton
           classNames={{
-            base: ['min-w-12 data-[loaded=true]:min-w-0', 'rounded-[4px]'],
-            content: 'text-tiny',
+            base: ['min-w-12 data-[loaded=true]:min-w-0', 'rounded-sm'],
+            content: isSearch ? 'text-mini' : 'text-tiny',
           }}
           isLoaded={status !== 'loading'}
         >

@@ -4,13 +4,11 @@ import { defineContentScript } from '#imports'
 import { parse } from '@midra/nco-utils/parse'
 
 import { MATCHES } from '@/constants/matches'
-
 import { logger } from '@/utils/logger'
 import { checkVodEnable } from '@/utils/extension/checkVodEnable'
-
 import { NCOPatcher } from '@/ncoverlay/patcher'
 
-import './style.scss'
+import './style.css'
 
 const vod: VodKey = 'tver'
 
@@ -25,18 +23,17 @@ async function main() {
 
   logger.log('vod', vod)
 
-  const patcher = new NCOPatcher({
-    vod,
+  const patcher = new NCOPatcher(vod, {
     getInfo: async (nco) => {
       const seriesTitleElem = document.body.querySelector<HTMLElement>(
-        'h2[class^="titles_seriesTitle"]'
+        'h2[class^="EpisodeDescription_seriesTitle_"]'
       )
       const titleElem = document.body.querySelector<HTMLElement>(
-        'h1[class^="titles_title"]'
+        'h1[class^="EpisodeDescription_title_"]'
       )
 
       const seriesTitleText = seriesTitleElem?.textContent
-      const episodeTitle = titleElem?.textContent ?? null
+      const episodeTitle = titleElem?.textContent
 
       const seasonText = [
         ...document.body.querySelectorAll(
@@ -51,11 +48,11 @@ async function main() {
 
       const { title, season } = seriesTitleText
         ? parse(
-            `${seriesTitleText} ${(seasonText !== '本編' && `(${seasonText})`) || ''} #0`
+            `${seriesTitleText} ${seasonText && seasonText !== '本編' ? `(${seasonText})` : ''} #0`
           )
         : {}
       const parsed = parse(
-        `${title ?? ''} ${season?.text ?? ''} ${episodeTitle}`
+        `${title ?? ''} ${season?.text ?? ''} ${episodeTitle ?? ''}`
       )
 
       if (!parsed.title) {
@@ -64,7 +61,7 @@ async function main() {
       }
       if (parsed.isSingleEpisode && !parsed.episode && !parsed.subtitle) {
         const { subtitle, subtitleStripped } = parse(
-          `タイトル #0 ${episodeTitle}`
+          `タイトル #0 ${episodeTitle ?? ''}`
         )
 
         parsed.subtitle = subtitle
@@ -102,7 +99,7 @@ async function main() {
     } else {
       if (location.pathname.startsWith('/episodes/')) {
         const video = document.body.querySelector<HTMLVideoElement>(
-          'div[class*="_videoContainer_"] .video-js > video.vjs-tech'
+          'div[class*="_videoContainer_"] .video-js > video.vjs-tech[src]'
         )
 
         if (video) {

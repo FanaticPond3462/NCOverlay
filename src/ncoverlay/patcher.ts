@@ -1,26 +1,30 @@
 import type { ParsedResult } from '@midra/nco-utils/parse'
 import type { VodKey } from '@/types/constants'
-import type { NCOSearcherAutoLoadArgs } from './searcher'
+import type { VideoChapter } from '@/utils/api/jikkyo/findChapters'
+import type { NCOSearcherAutoSearchArgs } from './searcher'
+import type { StateInfo } from './state'
 
 import { parse } from '@midra/nco-utils/parse'
 
 import { logger } from '@/utils/logger'
 import { settings } from '@/utils/settings/extension'
+import { sendMessageToBackground } from '@/messaging/to-background'
 
 import { NCOverlay } from '.'
-import { ncoMessenger } from './messaging'
 
-export type PlayingInfo = {
+export interface PlayingInfo {
   input: string | ParsedResult
   duration: number
-  disableExtract?: boolean
+  chapters?: VideoChapter[]
+  disableParse?: boolean
+  disableAdjustJikkyoOffset?: boolean
 }
 
 export class NCOPatcher {
   readonly #vod
   readonly #getInfo
   readonly #appendCanvas
-  readonly #autoLoad
+  readonly #autoSearch
 
   #video: HTMLVideoElement | null = null
   #nco: NCOverlay | null = null
@@ -29,16 +33,21 @@ export class NCOPatcher {
     return this.#nco
   }
 
-  constructor(init: {
-    vod: VodKey
-    getInfo: (nco: NCOverlay) => Promise<PlayingInfo | null>
-    appendCanvas: (video: HTMLVideoElement, canvas: HTMLCanvasElement) => void
-    autoLoad?: (nco: NCOverlay, args: NCOSearcherAutoLoadArgs) => Promise<void>
-  }) {
-    this.#vod = init.vod
+  constructor(
+    vod: VodKey,
+    init: {
+      getInfo: (nco: NCOverlay) => Promise<PlayingInfo | null>
+      appendCanvas: (video: HTMLVideoElement, canvas: HTMLCanvasElement) => void
+      autoSearch?: (
+        nco: NCOverlay,
+        args: NCOSearcherAutoSearchArgs
+      ) => Promise<void>
+    }
+  ) {
+    this.#vod = vod
     this.#getInfo = init.getInfo
     this.#appendCanvas = init.appendCanvas
-    this.#autoLoad = init.autoLoad
+    this.#autoSearch = init.autoSearch
   }
 
   dispose() {
@@ -48,24 +57,20 @@ export class NCOPatcher {
     this.#nco = null
   }
 
-  setVideo(video: HTMLVideoElement) {
+  async setVideo(video: HTMLVideoElement) {
     if (this.#video === video) return
 
     this.dispose()
 
     this.#video = video
-    this.#nco = new NCOverlay(this.#video)
 
-    const load = async () => {
+    const tab = await sendMessageToBackground('getCurrentTab', null)
+    const tabId = tab?.id
+
+    this.#nco = new NCOverlay(tabId!, this.#video)
+
+    const loadInfo = async () => {
       if (!this.#nco) return
-
-      const status = await this.#nco.state.get('status')
-
-      if (status === 'searching' || status === 'loading') {
-        return
-      }
-
-      await this.#nco.state.set('status', 'searching')
 
       try {
         const info = await this.#getInfo(this.#nco)
@@ -75,7 +80,7 @@ export class NCOPatcher {
         if (info) {
           const { input } = info
 
-          if (info.disableExtract) {
+          if (info.disableParse) {
             parsed =
               typeof input === 'string'
                 ? {
@@ -90,42 +95,62 @@ export class NCOPatcher {
           }
         }
 
-        const autoLoads = await settings.get('settings:comment:autoLoads')
-
-        const args: NCOSearcherAutoLoadArgs = {
+        const args: StateInfo = {
           input: parsed ?? '',
           duration: info ? Math.floor(info.duration) : 0,
-          targets: {
-            official: autoLoads.includes('official'),
-            danime: autoLoads.includes('danime'),
-            chapter: autoLoads.includes('chapter'),
-            szbh: autoLoads.includes('szbh'),
-          },
+          chapters: info?.chapters,
+          disableAdjustJikkyoOffset: info?.disableAdjustJikkyoOffset,
         }
 
-        const stateInfo = { ...args }
-
         await this.#nco.state.set('vod', this.#vod)
-        await this.#nco.state.set('info', stateInfo)
+        await this.#nco.state.set('info', args)
 
-        logger.log('state.vod', this.#vod)
-        logger.log('state.info', stateInfo)
+        logger.log('state.info', args)
+      } catch (err) {
+        logger.error('patcher:loadInfo', err)
+      }
+    }
 
-        // 自動検索
-        if (autoLoads.length && args.input && args.duration) {
-          args.jikkyo = autoLoads.includes('jikkyo')
-          args.jikkyoChannelIds = await settings.get(
-            'settings:comment:jikkyoChannelIds'
+    const autoSearch = async () => {
+      if (!this.#nco) return
+
+      const status = await this.#nco.state.get('status')
+
+      if (status === 'searching' || status === 'loading') {
+        return
+      }
+
+      await this.#nco.state.set('status', 'searching')
+
+      try {
+        const info = await this.#nco.state.get('info')
+
+        const [targets, jikkyoChannelIds, jikkyoIgnoreRerun] =
+          await settings.get(
+            'settings:autoSearch:targets',
+            'settings:autoSearch:jikkyoChannelIds',
+            'settings:autoSearch:jikkyoIgnoreRerun'
           )
 
-          if (this.#autoLoad) {
-            await this.#autoLoad(this.#nco, args)
+        const args: NCOSearcherAutoSearchArgs | null = {
+          input: '',
+          duration: 0,
+          targets,
+          jikkyoChannelIds,
+          jikkyoIgnoreRerun,
+          ...info,
+        }
+
+        // 自動検索
+        if (targets.length && args.input && args.duration) {
+          if (this.#autoSearch) {
+            await this.#autoSearch(this.#nco, args)
           } else {
-            await this.#nco.searcher.autoLoad(args)
+            await this.#nco.searcher.autoSearch(args)
           }
         }
       } catch (err) {
-        logger.error('patcher:load', err)
+        logger.error('patcher:autoSearch', err)
       }
 
       await this.#nco.state.set('status', 'ready')
@@ -134,7 +159,11 @@ export class NCOPatcher {
     this.#nco.addEventListener('loadedmetadata', async function () {
       await this.clear()
 
-      load()
+      await loadInfo()
+
+      if (await settings.get('settings:autoSearch:manual')) return
+
+      await autoSearch()
     })
 
     this.#nco.addEventListener('reload', async function () {
@@ -144,10 +173,11 @@ export class NCOPatcher {
         this.state.remove('slotDetails', { isAutoLoaded: true }),
       ])
 
-      load()
+      await loadInfo()
+      await autoSearch()
     })
 
-    const intervalMs = 500
+    const intervalMs = 250
     let lastTime = performance.now()
 
     this.#nco.addEventListener('timeupdate', function () {
@@ -157,12 +187,10 @@ export class NCOPatcher {
       if (intervalMs < delta) {
         lastTime = time - (delta % intervalMs)
 
-        ncoMessenger
-          .sendMessage('timeupdate', {
-            id: this.id,
-            time: this.renderer.video.currentTime * 1000,
-          })
-          .catch(() => {})
+        sendMessageToBackground('timeupdate', {
+          id: this.id,
+          time: this.renderer.video.currentTime * 1000,
+        })
       }
     })
 

@@ -3,13 +3,11 @@ import type { VodKey } from '@/types/constants'
 import { defineContentScript } from '#imports'
 
 import { MATCHES } from '@/constants/matches'
-
 import { logger } from '@/utils/logger'
 import { checkVodEnable } from '@/utils/extension/checkVodEnable'
-
 import { NCOPatcher } from '@/ncoverlay/patcher'
 
-import './style.scss'
+import './style.css'
 
 const vod: VodKey = 'hulu'
 
@@ -24,8 +22,7 @@ async function main() {
 
   logger.log('vod', vod)
 
-  const patcher = new NCOPatcher({
-    vod,
+  const patcher = new NCOPatcher(vod, {
     getInfo: async (nco) => {
       if (
         document.querySelector(
@@ -60,7 +57,7 @@ async function main() {
 
       return workTitle
         ? {
-            input: `${workTitle} ${episodeTitle}`,
+            input: `${workTitle} ${episodeTitle ?? ''}`,
             duration,
           }
         : null

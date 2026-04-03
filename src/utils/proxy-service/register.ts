@@ -1,12 +1,12 @@
 import type { ExtensionMessenger } from '@webext-core/messaging'
 import type { WindowMessenger } from '@webext-core/messaging/page'
-import type { Service, ProtocolMap } from '.'
+import type { ProtocolMap, Service } from '.'
 
-import get from '@/utils/get-value'
+import { get } from '@/utils/get'
 
-export function registerProxy<TService extends Service>(
+export function registerProxy<S extends Service>(
   name: string,
-  service: TService,
+  service: S,
   onMessage: (
     | ExtensionMessenger<ProtocolMap>
     | WindowMessenger<ProtocolMap>

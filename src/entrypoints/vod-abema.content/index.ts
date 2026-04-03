@@ -5,14 +5,16 @@ import { parse } from '@midra/nco-utils/parse'
 import { normalizeAll } from '@midra/nco-utils/parse/libs/normalize'
 
 import { MATCHES } from '@/constants/matches'
-
 import { logger } from '@/utils/logger'
 import { checkVodEnable } from '@/utils/extension/checkVodEnable'
 import { ncoApiProxy } from '@/proxy/nco-utils/api/extension'
-
 import { NCOPatcher } from '@/ncoverlay/patcher'
 
-import './style.scss'
+import './style.css'
+
+const EP_PATH_REGEXP = /^\/video\/episode\/.+$/
+const SLOT_PATH_REGEXP = /^\/channels\/[^\/]+\/slots\/.+$/
+const EP_TITLE_LAST_REGEXP = /^最終(?:回|話)(?=\s)/
 
 const vod: VodKey = 'abema'
 
@@ -32,9 +34,9 @@ async function main() {
 
     const { pathname } = location
 
-    if (/^\/video\/episode\/.+$/.test(pathname)) {
+    if (EP_PATH_REGEXP.test(pathname)) {
       programId = pathname.split('/').at(-1)
-    } else if (/^\/channels\/[^\/]+\/slots\/.+$/.test(pathname)) {
+    } else if (SLOT_PATH_REGEXP.test(pathname)) {
       const id = pathname.split('/').at(-1)
       const token = localStorage.getItem('abm_token')
 
@@ -50,8 +52,7 @@ async function main() {
     return programId ?? null
   }
 
-  const patcher = new NCOPatcher({
-    vod,
+  const patcher = new NCOPatcher(vod, {
     getInfo: async () => {
       const programId = await getProgramId()
       const token = localStorage.getItem('abm_token')
@@ -87,11 +88,11 @@ async function main() {
         }
       }
 
-      let episodeTitle: string | undefined
+      let episodeTitle: string | null = null
 
       if (workTitle !== program.episode.title) {
         episodeTitle = program.episode.title.replace(
-          /^最終(?:回|話)(?=\s)/,
+          EP_TITLE_LAST_REGEXP,
           `第${program.episode.number}話`
         )
       }
@@ -104,7 +105,7 @@ async function main() {
 
       return workTitle
         ? {
-            input: `${workTitle} ${episodeTitle}`,
+            input: `${workTitle} ${episodeTitle ?? ''}`,
             duration,
           }
         : null
@@ -130,10 +131,7 @@ async function main() {
     } else {
       const { pathname } = location
 
-      if (
-        /^\/video\/episode\/.+$/.test(pathname) ||
-        /^\/channels\/[^\/]+\/slots\/.+$/.test(pathname)
-      ) {
+      if (EP_PATH_REGEXP.test(pathname) || SLOT_PATH_REGEXP.test(pathname)) {
         const video = document.body.querySelector<HTMLVideoElement>(
           '.com-a-Video__video > video[preload][src]'
         )
