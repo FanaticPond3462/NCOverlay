@@ -51,6 +51,7 @@ body:
         - label: NHKオンデマンド
         - label: TVer
         - label: YouTube
+        - label: TELESA
 
   - type: checkboxes
     id: auto-search-targets
@@ -62,7 +63,6 @@ body:
         - label: dアニメ(分割)
         - label: コメント専用
         - label: 実況
-        - label: 生放送
 
   - type: textarea
     id: video

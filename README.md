@@ -24,6 +24,7 @@
 - [NHK ONE](https://www.web.nhk/)
 - [NHKオンデマンド](https://www.nhk-ondemand.jp/)
 - [TVer](https://tver.jp/)
+- [TELESA](https://www.telasa.jp/)
 
 ※ 増減する可能性あり
 
